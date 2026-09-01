@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SightToSound - AI Visual Music Matcher</title>
   
+  <!-- TensorFlow.js & COCO-SSD Object Detection Models -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
@@ -14,6 +15,7 @@
       --card-bg: rgba(21, 30, 49, 0.75);
       --accent: #6366f1;
       --accent-glow: rgba(99, 102, 241, 0.4);
+      --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
       --text: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -140,32 +142,39 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid #1e293b;
-      padding-bottom: 10px;
+      padding-bottom: 12px;
     }
 
-    .song-title { font-size: 1.2rem; font-weight: bold; color: #38bdf8; }
-    .song-artist { font-size: 0.9rem; color: #94a3b8; }
+    .song-title { font-size: 1.25rem; font-weight: bold; color: #38bdf8; }
+    .song-artist { font-size: 0.9rem; color: #94a3b8; margin-top: 2px; }
 
-    .audio-controls {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .btn {
-      background: var(--accent);
+    /* Interactive Remix Button */
+    .btn-remix {
+      background: var(--accent-gradient);
       color: white;
       border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
+      padding: 10px 18px;
+      border-radius: 25px;
       font-weight: 600;
+      font-size: 0.9rem;
       cursor: pointer;
-      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+      transition: all 0.3s ease;
+      animation: soft-pulse 3s infinite;
     }
-    .btn:hover { background: #4f46e5; box-shadow: 0 0 10px var(--accent-glow); }
-    .btn-secondary { background: #334155; }
-    .btn-secondary:hover { background: #475569; }
+    .btn-remix:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+    }
+    .btn-remix:active { transform: translateY(0); }
+
+    @keyframes soft-pulse {
+      0%, 100% { box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3); }
+      50% { box-shadow: 0 4px 25px rgba(99, 102, 241, 0.6); }
+    }
 
     audio { width: 100%; height: 40px; border-radius: 8px; margin-top: 5px; }
 
@@ -174,13 +183,63 @@
       border: 1px solid #1e293b;
       border-radius: 10px;
       padding: 15px;
-      max-height: 160px;
+      max-height: 150px;
       overflow-y: auto;
       font-size: 0.9rem;
       line-height: 1.6;
       color: #cbd5e1;
       white-space: pre-line;
       text-align: center;
+    }
+
+    /* History Sequence Panel */
+    .history-card {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .history-card h3 {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .history-item.active {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .history-index {
+      font-weight: bold;
+      color: var(--accent);
+      margin-right: 8px;
     }
   </style>
 </head>
@@ -226,13 +285,14 @@
 
   <p class="status-badge" id="statusText">System Ready. Upload an image to start audio generation.</p>
 
+  <!-- Custom Audio Player & Lyrics Card -->
   <div class="player-card" id="playerCard">
     <div class="song-header">
       <div>
         <div class="song-title" id="songTitle">Song Title</div>
         <div class="song-artist" id="songArtist">Artist Name</div>
       </div>
-      <button class="btn btn-secondary" id="refetchBtn">🔄 Re-fetch Song</button>
+      <button class="btn-remix" id="remixBtn">✨ Remix Vibe</button>
     </div>
 
     <audio id="audioPlayer" controls></audio>
@@ -240,6 +300,12 @@
     <div class="lyrics-box" id="lyricsBox">
       Lyrics will appear here once audio loads...
     </div>
+  </div>
+
+  <!-- History Sequence Log -->
+  <div class="history-card" id="historyCard">
+    <h3>📜 Suggested Track History <span id="historyCount">(0)</span></h3>
+    <div class="history-list" id="historyList"></div>
   </div>
 </div>
 
@@ -275,51 +341,57 @@
   // =========================================================================
 
   const AUDIO_DATABASE = {
-    // Single & Multi-Object Scene Keys
     "person": {
       hindi: [
         { title: "Zindagi Ek Safar", artist: "Kishore Kumar", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", lyrics: "Zindagi ek safar hai suhana\nYahan kal kya ho kisne jaana\nOho zindagi ek safar hai suhana..." },
-        { title: "Phir Se Udd Chala", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", lyrics: "Phir se udd chala\nKahi door door door...\nKabhi daal daal kabhi paat paat..." }
+        { title: "Phir Se Udd Chala", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", lyrics: "Phir se udd chala\nKahi door door door...\nKabhi daal daal kabhi paat paat..." },
+        { title: "Safarnama", artist: "Lucky Ali", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", lyrics: "O Safarnama... Sawaar ne laga\nMera rastaa... tanaane tanaane..." }
       ],
       english: [
-        { title: "Happy Vibe", artist: "Pharrell Williams", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", lyrics: "It might seem crazy what I'm 'bout to say\nSunshine she's here, you can take a break..." }
+        { title: "Happy Vibe", artist: "Pharrell Williams", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", lyrics: "It might seem crazy what I'm 'bout to say\nSunshine she's here, you can take a break..." },
+        { title: "Acoustic Sunset", artist: "John Mayer", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", lyrics: "Shadows in the open air\nBreeze through the quiet hair..." }
       ]
     },
     "person+dog": {
       hindi: [
-        { title: "Tera Yaar Hoon Main", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", lyrics: "Tu jo rootha toh kaun hansega\nTu jo chhoota toh kaun rahega\nTu hi toh hai mera dost..." }
+        { title: "Tera Yaar Hoon Main", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", lyrics: "Tu jo rootha toh kaun hansega\nTu jo chhoota toh kaun rahega\nTu hi toh hai mera dost..." },
+        { title: "Yaaron Dosti", artist: "KK", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", lyrics: "Yaaron dosti badi hi haseen hai\nYeh na ho toh kya phir bolo yeh zindagi hai..." }
       ],
       english: [
-        { title: "Count On Me", artist: "Bruno Mars", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", lyrics: "If you ever find yourself stuck in the middle of the sea\nI'll sail the world to find you..." }
+        { title: "Count On Me", artist: "Bruno Mars", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", lyrics: "If you ever find yourself stuck in the middle of the sea\nI'll sail the world to find you..." }
       ]
     },
     "car+mountain": {
       hindi: [
-        { title: "Yun Hi Chala Chal", artist: "Udit Narayan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", lyrics: "Yun hi chala chal rahi\nKitni haseen hai yeh duniya\nPhoolon bhari yeh raahein..." }
+        { title: "Yun Hi Chala Chal", artist: "Udit Narayan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", lyrics: "Yun hi chala chal rahi\nKitni haseen hai yeh duniya\nPhoolon bhari yeh raahein..." },
+        { title: "Dil Chahta Hai", artist: "Shankar Mahadevan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", lyrics: "Dil chahta hai kabhi na beete chamkeele din..." }
       ]
     },
     "tree": {
       hindi: [
-        { title: "Hawaa Hawaa", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", lyrics: "Hawaa hawaa aaye hawaa\nKhushboo luta de hawaa..." }
+        { title: "Hawaa Hawaa", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", lyrics: "Hawaa hawaa aaye hawaa\nKhushboo luta de hawaa..." }
       ]
     },
     "mountain": {
       hindi: [
-        { title: "Yeh Haseen Waadiyan", artist: "A.R. Rahman", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", lyrics: "Yeh haseen waadiyan yeh khula aasmaan\nAa gaye hum kahan ae mere saajna..." }
+        { title: "Yeh Haseen Waadiyan", artist: "A.R. Rahman", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", lyrics: "Yeh haseen waadiyan yeh khula aasmaan\nAa gaye hum kahan ae mere saajna..." }
       ]
     },
     "default": {
       hindi: [
-        { title: "Ilahi (Lofi Remix)", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", lyrics: "Shaam bhi koi jaise hai nadi\nLehron lehar jaise beh rahi...\nIlahi mera jee aaye aaye..." }
+        { title: "Ilahi (Lofi Remix)", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", lyrics: "Shaam bhi koi jaise hai nadi\nLehron lehar jaise beh rahi...\nIlahi mera jee aaye aaye..." },
+        { title: "Matargashti", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", lyrics: "Matargashti khuli sadak mein\nMukhtasar ho baatein..." }
       ],
       english: [
-        { title: "Acoustic Journey", artist: "Studio Track", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", lyrics: "Walking down the open trail\nUnderneath the gentle rain..." }
+        { title: "Acoustic Journey", artist: "Studio Track", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", lyrics: "Walking down the open trail\nUnderneath the gentle rain..." }
       ]
     }
   };
 
   let model;
   let currentDetectedSceneKey = "default";
+  let currentTrackIndex = 0;
+  let imageHistory = []; // Array to store suggested track history for current image
 
   async function initAI() {
     const statusText = document.getElementById('statusText');
@@ -332,7 +404,8 @@
   const dropZone = document.getElementById('dropZone');
   const imageInput = document.getElementById('imageInput');
   const audioPlayer = document.getElementById('audioPlayer');
-  const refetchBtn = document.getElementById('refetchBtn');
+  const remixBtn = document.getElementById('remixBtn');
+  const languageSelect = document.getElementById('languageSelect');
 
   dropZone.addEventListener('click', () => imageInput.click());
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -347,8 +420,15 @@
     if (e.target.files.length) processFile(e.target.files[0]);
   });
 
-  refetchBtn.addEventListener('click', () => {
+  // Interactive Remix button handler
+  remixBtn.addEventListener('click', () => {
+    currentTrackIndex++;
     loadSongForScene(currentDetectedSceneKey, true);
+  });
+
+  languageSelect.addEventListener('change', () => {
+    currentTrackIndex = 0;
+    loadSongForScene(currentDetectedSceneKey, false);
   });
 
   function processFile(file) {
@@ -359,6 +439,11 @@
       
       document.getElementById('previewContainer').style.display = 'flex';
       document.getElementById('uploadText').style.display = 'none';
+
+      // Reset history & index for fresh image
+      imageHistory = [];
+      currentTrackIndex = 0;
+      updateHistoryUI();
       
       img.onload = async () => {
         await analyzeAndPlay(img);
@@ -367,7 +452,6 @@
     reader.readAsDataURL(file);
   }
 
-  // Multi-Object Automation Logic
   async function analyzeAndPlay(img) {
     if (!model) return;
     
@@ -383,10 +467,7 @@
     let sceneKey = "default";
 
     if (predictions.length > 0) {
-      // Extract unique list of detected items sorted alphabetically
       const detectedClasses = [...new Set(predictions.map(p => p.class.toLowerCase()))].sort();
-      
-      // Check for multi-object combinations first (e.g., "person+dog")
       const combinedKey = detectedClasses.slice(0, 2).join("+");
       
       if (AUDIO_DATABASE[combinedKey]) {
@@ -395,7 +476,6 @@
         sceneKey = detectedClasses[0];
       }
     } else {
-      // Color-based landscape analysis fallback
       sceneKey = analyzeLandscapeColor(img);
     }
 
@@ -427,17 +507,17 @@
     return "default";
   }
 
-  function loadSongForScene(sceneKey, isRefetch = false) {
+  function loadSongForScene(sceneKey, isRemix = false) {
     const lang = document.getElementById('languageSelect').value;
     const playlist = (AUDIO_DATABASE[sceneKey] && AUDIO_DATABASE[sceneKey][lang]) 
       ? AUDIO_DATABASE[sceneKey][lang] 
       : (AUDIO_DATABASE.default[lang] || AUDIO_DATABASE.default.english);
 
-    // Pick random song from playlist array if refetch is clicked
-    const songIndex = isRefetch ? Math.floor(Math.random() * playlist.length) : 0;
+    // Pick next non-repeating song using modulo cycle
+    const songIndex = currentTrackIndex % playlist.length;
     const selectedSong = playlist[songIndex];
 
-    // Update UI Elements
+    // Update Player UI
     document.getElementById('songTitle').innerText = selectedSong.title;
     document.getElementById('songArtist').innerText = selectedSong.artist;
     document.getElementById('lyricsBox').innerText = selectedSong.lyrics;
@@ -445,6 +525,44 @@
     audioPlayer.src = selectedSong.src;
     document.getElementById('playerCard').style.display = 'flex';
     audioPlayer.play();
+
+    // Push into sequence history if not already recorded as active top
+    const historyItem = { title: selectedSong.title, artist: selectedSong.artist, lang: lang.toUpperCase() };
+    if (!imageHistory.length || imageHistory[imageHistory.length - 1].title !== selectedSong.title) {
+      imageHistory.push(historyItem);
+      updateHistoryUI();
+    }
+  }
+
+  function updateHistoryUI() {
+    const historyCard = document.getElementById('historyCard');
+    const historyList = document.getElementById('historyList');
+    const historyCount = document.getElementById('historyCount');
+
+    if (imageHistory.length === 0) {
+      historyCard.style.display = 'none';
+      return;
+    }
+
+    historyCard.style.display = 'block';
+    historyCount.innerText = `(${imageHistory.length})`;
+    historyList.innerHTML = '';
+
+    imageHistory.slice().reverse().forEach((item, index) => {
+      const realSequenceIndex = imageHistory.length - index;
+      const isCurrent = index === 0;
+
+      const div = document.createElement('div');
+      div.className = `history-item ${isCurrent ? 'active' : ''}`;
+      div.innerHTML = `
+        <div>
+          <span class="history-index">#${realSequenceIndex}</span>
+          <strong>${item.title}</strong> — <span style="color:#94a3b8">${item.artist}</span>
+        </div>
+        <span style="font-size:0.75rem; color:#64748b; background:#020617; padding:2px 6px; border-radius:4px;">${item.lang}</span>
+      `;
+      historyList.appendChild(div);
+    });
   }
 </script>
 
