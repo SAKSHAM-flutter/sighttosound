@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SightToSound - AI Visual Music Matcher</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(21, 30, 49, 0.75);
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.4);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(circle at top right, #1e1b4b, transparent 45%),
+                        radial-gradient(circle at bottom left, #0f172a, transparent 45%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 900px;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+
+    header { text-align: center; margin-bottom: 25px; }
+    header h1 { 
+      font-size: 2.5rem; 
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #a5b4fc, #6366f1, #38bdf8); 
+      -webkit-background-clip: text; 
+      -webkit-text-fill-color: transparent; 
+    }
+    header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 5px; }
+
+    .control-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .input-group { display: flex; flex-direction: column; gap: 8px; }
+    .input-group label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #cbd5e1; }
+    
+    select {
+      background: #0f172a;
+      color: #fff;
+      border: 1px solid #334155;
+      padding: 12px;
+      border-radius: 10px;
+      outline: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.3s;
+    }
+    select:focus { border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+
+    /* Drag and Drop Zone */
+    .drop-zone {
+      border: 2px dashed #334155;
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      background: rgba(15, 23, 42, 0.5);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
+    .drop-zone input { display: none; }
+
+    /* Image & Detection Canvas Overlay */
+    .media-preview-container {
+      position: relative;
+      max-width: 100%;
+      margin: 10px auto 0;
+      display: none;
+      justify-content: center;
+    }
+
+    .media-preview-container img {
+      max-width: 100%;
+      max-height: 350px;
+      border-radius: 12px;
+    }
+
+    .media-preview-container canvas {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    /* Laser Scanner Bar */
+    .scanner-line {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 4px;
+      background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+      box-shadow: 0 0 15px #38bdf8;
+      display: none;
+      animation: scan 2s infinite ease-in-out;
+    }
+    @keyframes scan { 0% { top: 0%; } 50% { top: 95%; } 100% { top: 0%; } }
+
+    /* Dynamic Detection Tags */
+    .tags-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 15px 0; }
+    .tag { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* YouTube Player Wrapper */
+    #player-wrapper {
+      margin-top: 25px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+      height: 360px;
+    }
+
+    .status-badge {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <h1>SightToSound</h1>
+    <p>Upload scenery, nature, pets, or everyday items to sync tailored music tracks</p>
+  </header>
+
+  <div class="control-panel">
+    <div class="input-group">
+      <label for="languageSelect">Music Language</label>
+      <select id="languageSelect">
+        <option value="hindi" selected>Hindi (हिंदी)</option>
+        <option value="english">English</option>
+        <option value="bengali">Bengali (বাংলা)</option>
+        <option value="spanish">Spanish (Español)</option>
+        <option value="punjabi">Punjabi (ਪੰਜਾਬੀ)</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label for="vibeSelect">Preferred Mood</label>
+      <select id="vibeSelect">
+        <option value="upbeat">Upbeat & Energetic</option>
+        <option value="chill" selected>Chill & Lofi</option>
+        <option value="romantic">Romantic & Soft</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="drop-zone" id="dropZone">
+    <div class="scanner-line" id="scannerLine"></div>
+    <p id="uploadText">📁 Drag & Drop an image here or <b>Click to Browse</b></p>
+    <input type="file" id="imageInput" accept="image/*">
+    
+    <div class="media-preview-container" id="previewContainer">
+      <img id="imagePreview" alt="Upload Preview">
+      <canvas id="detectionCanvas"></canvas>
+    </div>
+  </div>
+
+  <div class="tags-container" id="tagsContainer"></div>
+  <p class="status-badge" id="statusText">System Ready. Select your options and upload an image.</p>
+
+  <div id="player-wrapper">
+    <div id="ytPlayer"></div>
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // 1. ANTI-INSPECT & PROTECTION LAYER
+  // =========================================================================
+
+  // Disable Right-Click Context Menu
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Disable Developer Tool Shortcuts (F12, Ctrl+Shift+I/J/C, Ctrl+U)
+  document.addEventListener('keydown', (e) => {
+    if (
+      e.key === 'F12' || 
+      (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) ||
+      (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
+    ) {
+      e.preventDefault();
+      return false;
+    }
+  });
+
+  // Anti-Debugging Trap (Breaks execution if DevTools is opened)
+  setInterval(() => {
+    const startTime = performance.now();
+    debugger;
+    const endTime = performance.now();
+    if (endTime - startTime > 100) {
+      document.body.innerHTML = "<div style='color:white;text-align:center;margin-top:100px;'><h2>Developer Tools Access Restricted</h2></div>";
+    }
+  }, 1000);
+
+  // =========================================================================
+  // 2. SIGHTTOSOUND APPLICATION LOGIC
+  // =========================================================================
+
+  // Expanded Songs Database (Objects, Landscapes & Languages)
+  const MUSIC_DB = {
+    // Nature & Landscapes
+    "potted plant": { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
+    tree: { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
+    mountain: { hindi: "dTU44u_t6jI", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
+    bird: { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
+
+    // Vehicles & Travel
+    car: { hindi: "3wA_yX12Fp0", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
+    motorcycle: { hindi: "3wA_yX12Fp0", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
+    bicycle: { hindi: "dTU44u_t6jI", english: "ZbZSe6N_BXs", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
+    airplane: { hindi: "dTU44u_t6jI", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
+
+    // People & Animals
+    person: { hindi: "dTU44u_t6jI", english: "ZbZSe6N_BXs", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
+    dog: { hindi: "v56Xp8LqUa8", english: "0N1_0SUGlSQ", bengali: "T94PHkuydcw", spanish: "LjhCEgIzU0k", punjabi: "6K21fEa8UeE" },
+    cat: { hindi: "YQHsXMglC9A", english: "J---aiyznGQ", bengali: "5-667M6Vw-8", spanish: "4h3m75P6pSc", punjabi: "27dD-Qe2lR8" },
+
+    // Everyday Personal Objects
+    "cell phone": { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
+    laptop: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
+    cup: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
+    chair: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
+    bottle: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
+    book: { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
+
+    // Fallback Track
+    default: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" }
+  };
+
+  let model;
+  let player;
+
+  // Load YouTube IFrame API
+  const tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(tag);
+
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('ytPlayer', {
+      height: '100%',
+      width: '100%',
+      videoId: MUSIC_DB.default.hindi,
+      playerVars: { 'autoplay': 0, 'controls': 1, 'playsinline': 1 }
+    });
+  }
+
+  // Load COCO-SSD Object Detection Model
+  async function initAI() {
+    const statusText = document.getElementById('statusText');
+    statusText.innerText = "⚡ Initializing AI vision engine...";
+    model = await cocoSsd.load();
+    statusText.innerText = "✅ Engine Ready! Select options and upload an image.";
+  }
+  initAI();
+
+  // Handle Drag-and-Drop & File Input
+  const dropZone = document.getElementById('dropZone');
+  const imageInput = document.getElementById('imageInput');
+
+  dropZone.addEventListener('click', () => imageInput.click());
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+  });
+
+  imageInput.addEventListener('change', (e) => {
+    if (e.target.files.length) processFile(e.target.files[0]);
+  });
+
+  function processFile(file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.getElementById('imagePreview');
+      img.src = event.target.result;
+      
+      document.getElementById('previewContainer').style.display = 'flex';
+      document.getElementById('uploadText').style.display = 'none';
+      
+      img.onload = async () => {
+        await runDetection(img);
+      };
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Image Detection & Canvas Box Rendering
+  async function runDetection(img) {
+    if (!model) return;
+    
+    const scanner = document.getElementById('scannerLine');
+    const statusText = document.getElementById('statusText');
+    const tagsContainer = document.getElementById('tagsContainer');
+    const canvas = document.getElementById('detectionCanvas');
+    const ctx = canvas.getContext('2d');
+
+    scanner.style.display = 'block';
+    statusText.innerText = "🔍 Scanning image for visual features & landscapes...";
+    tagsContainer.innerHTML = '';
+
+    canvas.width = img.clientWidth;
+    canvas.height = img.clientHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const predictions = await model.detect(img);
+    scanner.style.display = 'none';
+
+    let primaryMatch = 'default';
+
+    if (predictions.length > 0) {
+      const scaleX = img.clientWidth / img.naturalWidth;
+      const scaleY = img.clientHeight / img.naturalHeight;
+
+      predictions.forEach(pred => {
+        const [x, y, width, height] = pred.bbox;
+        const scaledX = x * scaleX;
+        const scaledY = y * scaleY;
+        const scaledW = width * scaleX;
+        const scaledH = height * scaleY;
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(scaledX, scaledY, scaledW, scaledH);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(scaledX, scaledY > 20 ? scaledY - 22 : scaledY, scaledW > 90 ? 90 : scaledW, 20);
+
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(pred.class.toUpperCase(), scaledX + 4, scaledY > 20 ? scaledY - 7 : scaledY + 14);
+
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.innerText = `🎯 ${pred.class} (${Math.round(pred.score * 100)}%)`;
+        tagsContainer.appendChild(tag);
+      });
+
+      primaryMatch = predictions[0].class;
+    } else {
+      // Fallback Color Analysis for Nature Scenery (Trees / Mountains / Water)
+      const colorMatch = analyzeLandscapeColor(img);
+      primaryMatch = colorMatch;
+
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.innerText = `🏞️ Landscape: ${colorMatch.toUpperCase()}`;
+      tagsContainer.appendChild(tag);
+    }
+
+    const selectedLang = document.getElementById('languageSelect').value;
+    statusText.innerText = `Detected "${primaryMatch.toUpperCase()}". Playing ${selectedLang.toUpperCase()} music!`;
+    playMatchedSong(primaryMatch);
+  }
+
+  // Canvas RGB Color Fallback for Natural Scenery
+  function analyzeLandscapeColor(img) {
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = img.naturalWidth;
+    tempCanvas.height = img.naturalHeight;
+    tempCtx.drawImage(img, 0, 0);
+
+    const data = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+    let r = 0, g = 0, b = 0;
+    const step = 20;
+
+    for (let i = 0; i < data.length; i += 4 * step) {
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+    }
+
+    const total = data.length / (4 * step);
+    r = r / total; g = g / total; b = b / total;
+
+    // Green dominance -> Trees/Forests
+    if (g > r && g > b) return "tree";
+    // Blue dominance -> Sky/Water/Mountains
+    if (b > r && b > g) return "mountain";
+
+    return "default";
+  }
+
+  function playMatchedSong(objectClass) {
+    const lang = document.getElementById('languageSelect').value;
+    let videoId;
+
+    if (MUSIC_DB[objectClass] && MUSIC_DB[objectClass][lang]) {
+      videoId = MUSIC_DB[objectClass][lang];
+    } else {
+      videoId = MUSIC_DB.default[lang] || MUSIC_DB.default.hindi;
+    }
+
+    if (player && player.loadVideoById) {
+      player.loadVideoById(videoId);
+    }
+  }
+</script>
+
+</body>
+</html>
