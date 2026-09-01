@@ -34,7 +34,7 @@
 
     .app-container {
       width: 100%;
-      max-width: 900px;
+      max-width: 850px;
       background: var(--card-bg);
       backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -80,7 +80,7 @@
     .drop-zone {
       border: 2px dashed #334155;
       border-radius: 16px;
-      padding: 30px;
+      padding: 25px;
       text-align: center;
       cursor: pointer;
       position: relative;
@@ -91,7 +91,6 @@
     .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
     .drop-zone input { display: none; }
 
-    /* Image & Detection Canvas Overlay */
     .media-preview-container {
       position: relative;
       max-width: 100%;
@@ -102,19 +101,11 @@
 
     .media-preview-container img {
       max-width: 100%;
-      max-height: 350px;
+      max-height: 280px;
       border-radius: 12px;
     }
 
-    .media-preview-container canvas {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      pointer-events: none;
-    }
-
-    /* Laser Scanner Bar */
+    /* Laser Scanner Animation */
     .scanner-line {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 4px;
@@ -125,26 +116,71 @@
     }
     @keyframes scan { 0% { top: 0%; } 50% { top: 95%; } 100% { top: 0%; } }
 
-    /* Dynamic Detection Tags */
-    .tags-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 15px 0; }
-    .tag { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; animation: fadeIn 0.4s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* YouTube Player Wrapper */
-    #player-wrapper {
-      margin-top: 25px;
-      border-radius: 14px;
-      overflow: hidden;
-      background: #000;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-      height: 360px;
-    }
-
     .status-badge {
       text-align: center;
       font-size: 0.9rem;
       color: #94a3b8;
-      margin-top: 10px;
+      margin: 15px 0;
+    }
+
+    /* Custom Audio Player & Lyrics Card */
+    .player-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 15px;
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .song-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 10px;
+    }
+
+    .song-title { font-size: 1.2rem; font-weight: bold; color: #38bdf8; }
+    .song-artist { font-size: 0.9rem; color: #94a3b8; }
+
+    .audio-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #4f46e5; box-shadow: 0 0 10px var(--accent-glow); }
+    .btn-secondary { background: #334155; }
+    .btn-secondary:hover { background: #475569; }
+
+    audio { width: 100%; height: 40px; border-radius: 8px; margin-top: 5px; }
+
+    .lyrics-box {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 15px;
+      max-height: 160px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #cbd5e1;
+      white-space: pre-line;
+      text-align: center;
     }
   </style>
 </head>
@@ -153,7 +189,7 @@
 <div class="app-container">
   <header>
     <h1>SightToSound</h1>
-    <p>Upload scenery, nature, pets, or everyday items to sync tailored music tracks</p>
+    <p>AI Audio-Sync Engine</p>
   </header>
 
   <div class="control-panel">
@@ -185,27 +221,35 @@
     
     <div class="media-preview-container" id="previewContainer">
       <img id="imagePreview" alt="Upload Preview">
-      <canvas id="detectionCanvas"></canvas>
     </div>
   </div>
 
-  <div class="tags-container" id="tagsContainer"></div>
-  <p class="status-badge" id="statusText">System Ready. Select your options and upload an image.</p>
+  <p class="status-badge" id="statusText">System Ready. Upload an image to start audio generation.</p>
 
-  <div id="player-wrapper">
-    <div id="ytPlayer"></div>
+  <div class="player-card" id="playerCard">
+    <div class="song-header">
+      <div>
+        <div class="song-title" id="songTitle">Song Title</div>
+        <div class="song-artist" id="songArtist">Artist Name</div>
+      </div>
+      <button class="btn btn-secondary" id="refetchBtn">🔄 Re-fetch Song</button>
+    </div>
+
+    <audio id="audioPlayer" controls></audio>
+
+    <div class="lyrics-box" id="lyricsBox">
+      Lyrics will appear here once audio loads...
+    </div>
   </div>
 </div>
 
 <script>
   // =========================================================================
-  // 1. ANTI-INSPECT & PROTECTION LAYER
+  // 1. ANTI-INSPECT PROTECTION LAYER
   // =========================================================================
 
-  // Disable Right-Click Context Menu
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  // Disable Developer Tool Shortcuts (F12, Ctrl+Shift+I/J/C, Ctrl+U)
   document.addEventListener('keydown', (e) => {
     if (
       e.key === 'F12' || 
@@ -217,80 +261,78 @@
     }
   });
 
-  // Anti-Debugging Trap (Breaks execution if DevTools is opened)
   setInterval(() => {
     const startTime = performance.now();
     debugger;
     const endTime = performance.now();
     if (endTime - startTime > 100) {
-      document.body.innerHTML = "<div style='color:white;text-align:center;margin-top:100px;'><h2>Developer Tools Access Restricted</h2></div>";
+      document.body.innerHTML = "<div style='color:white;text-align:center;margin-top:100px;'><h2>Access Restricted</h2></div>";
     }
   }, 1000);
 
   // =========================================================================
-  // 2. SIGHTTOSOUND APPLICATION LOGIC
+  // 2. SONG & LYRICS DATABASE
   // =========================================================================
 
-  // Expanded Songs Database (Objects, Landscapes & Languages)
-  const MUSIC_DB = {
-    // Nature & Landscapes
-    "potted plant": { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
-    tree: { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
-    mountain: { hindi: "dTU44u_t6jI", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
-    bird: { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
-
-    // Vehicles & Travel
-    car: { hindi: "3wA_yX12Fp0", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
-    motorcycle: { hindi: "3wA_yX12Fp0", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
-    bicycle: { hindi: "dTU44u_t6jI", english: "ZbZSe6N_BXs", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
-    airplane: { hindi: "dTU44u_t6jI", english: "7b4L-9Z2xrs", bengali: "eK9W-87tFio", spanish: "9bZkp7q19f0", punjabi: "6K21fEa8UeE" },
-
-    // People & Animals
-    person: { hindi: "dTU44u_t6jI", english: "ZbZSe6N_BXs", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
-    dog: { hindi: "v56Xp8LqUa8", english: "0N1_0SUGlSQ", bengali: "T94PHkuydcw", spanish: "LjhCEgIzU0k", punjabi: "6K21fEa8UeE" },
-    cat: { hindi: "YQHsXMglC9A", english: "J---aiyznGQ", bengali: "5-667M6Vw-8", spanish: "4h3m75P6pSc", punjabi: "27dD-Qe2lR8" },
-
-    // Everyday Personal Objects
-    "cell phone": { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
-    laptop: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
-    cup: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
-    chair: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
-    bottle: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" },
-    book: { hindi: "HqUeS3l-JgE", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "LjhCEgIzU0k", punjabi: "27dD-Qe2lR8" },
-
-    // Fallback Track
-    default: { hindi: "5qap5aO4i9A", english: "DWcJFNfaw9c", bengali: "WdG4t_8cW48", spanish: "kJQP7kiw5Fk", punjabi: "27dD-Qe2lR8" }
+  const AUDIO_DATABASE = {
+    // Single & Multi-Object Scene Keys
+    "person": {
+      hindi: [
+        { title: "Zindagi Ek Safar", artist: "Kishore Kumar", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", lyrics: "Zindagi ek safar hai suhana\nYahan kal kya ho kisne jaana\nOho zindagi ek safar hai suhana..." },
+        { title: "Phir Se Udd Chala", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", lyrics: "Phir se udd chala\nKahi door door door...\nKabhi daal daal kabhi paat paat..." }
+      ],
+      english: [
+        { title: "Happy Vibe", artist: "Pharrell Williams", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", lyrics: "It might seem crazy what I'm 'bout to say\nSunshine she's here, you can take a break..." }
+      ]
+    },
+    "person+dog": {
+      hindi: [
+        { title: "Tera Yaar Hoon Main", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", lyrics: "Tu jo rootha toh kaun hansega\nTu jo chhoota toh kaun rahega\nTu hi toh hai mera dost..." }
+      ],
+      english: [
+        { title: "Count On Me", artist: "Bruno Mars", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", lyrics: "If you ever find yourself stuck in the middle of the sea\nI'll sail the world to find you..." }
+      ]
+    },
+    "car+mountain": {
+      hindi: [
+        { title: "Yun Hi Chala Chal", artist: "Udit Narayan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", lyrics: "Yun hi chala chal rahi\nKitni haseen hai yeh duniya\nPhoolon bhari yeh raahein..." }
+      ]
+    },
+    "tree": {
+      hindi: [
+        { title: "Hawaa Hawaa", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", lyrics: "Hawaa hawaa aaye hawaa\nKhushboo luta de hawaa..." }
+      ]
+    },
+    "mountain": {
+      hindi: [
+        { title: "Yeh Haseen Waadiyan", artist: "A.R. Rahman", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", lyrics: "Yeh haseen waadiyan yeh khula aasmaan\nAa gaye hum kahan ae mere saajna..." }
+      ]
+    },
+    "default": {
+      hindi: [
+        { title: "Ilahi (Lofi Remix)", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", lyrics: "Shaam bhi koi jaise hai nadi\nLehron lehar jaise beh rahi...\nIlahi mera jee aaye aaye..." }
+      ],
+      english: [
+        { title: "Acoustic Journey", artist: "Studio Track", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", lyrics: "Walking down the open trail\nUnderneath the gentle rain..." }
+      ]
+    }
   };
 
   let model;
-  let player;
+  let currentDetectedSceneKey = "default";
 
-  // Load YouTube IFrame API
-  const tag = document.createElement('script');
-  tag.src = "https://www.youtube.com/iframe_api";
-  document.head.appendChild(tag);
-
-  function onYouTubeIframeAPIReady() {
-    player = new YT.Player('ytPlayer', {
-      height: '100%',
-      width: '100%',
-      videoId: MUSIC_DB.default.hindi,
-      playerVars: { 'autoplay': 0, 'controls': 1, 'playsinline': 1 }
-    });
-  }
-
-  // Load COCO-SSD Object Detection Model
   async function initAI() {
     const statusText = document.getElementById('statusText');
-    statusText.innerText = "⚡ Initializing AI vision engine...";
+    statusText.innerText = "⚡ Loading visual analysis engine...";
     model = await cocoSsd.load();
-    statusText.innerText = "✅ Engine Ready! Select options and upload an image.";
+    statusText.innerText = "✅ Engine Ready! Upload an image to play music.";
   }
   initAI();
 
-  // Handle Drag-and-Drop & File Input
   const dropZone = document.getElementById('dropZone');
   const imageInput = document.getElementById('imageInput');
+  const audioPlayer = document.getElementById('audioPlayer');
+  const refetchBtn = document.getElementById('refetchBtn');
 
   dropZone.addEventListener('click', () => imageInput.click());
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -305,6 +347,10 @@
     if (e.target.files.length) processFile(e.target.files[0]);
   });
 
+  refetchBtn.addEventListener('click', () => {
+    loadSongForScene(currentDetectedSceneKey, true);
+  });
+
   function processFile(file) {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -315,81 +361,49 @@
       document.getElementById('uploadText').style.display = 'none';
       
       img.onload = async () => {
-        await runDetection(img);
+        await analyzeAndPlay(img);
       };
     };
     reader.readAsDataURL(file);
   }
 
-  // Image Detection & Canvas Box Rendering
-  async function runDetection(img) {
+  // Multi-Object Automation Logic
+  async function analyzeAndPlay(img) {
     if (!model) return;
     
     const scanner = document.getElementById('scannerLine');
     const statusText = document.getElementById('statusText');
-    const tagsContainer = document.getElementById('tagsContainer');
-    const canvas = document.getElementById('detectionCanvas');
-    const ctx = canvas.getContext('2d');
 
     scanner.style.display = 'block';
-    statusText.innerText = "🔍 Scanning image for visual features & landscapes...";
-    tagsContainer.innerHTML = '';
-
-    canvas.width = img.clientWidth;
-    canvas.height = img.clientHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    statusText.innerText = "🔍 Processing visual elements & scene context...";
 
     const predictions = await model.detect(img);
     scanner.style.display = 'none';
 
-    let primaryMatch = 'default';
+    let sceneKey = "default";
 
     if (predictions.length > 0) {
-      const scaleX = img.clientWidth / img.naturalWidth;
-      const scaleY = img.clientHeight / img.naturalHeight;
-
-      predictions.forEach(pred => {
-        const [x, y, width, height] = pred.bbox;
-        const scaledX = x * scaleX;
-        const scaledY = y * scaleY;
-        const scaledW = width * scaleX;
-        const scaledH = height * scaleY;
-
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(scaledX, scaledY, scaledW, scaledH);
-
-        ctx.fillStyle = '#38bdf8';
-        ctx.fillRect(scaledX, scaledY > 20 ? scaledY - 22 : scaledY, scaledW > 90 ? 90 : scaledW, 20);
-
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.fillText(pred.class.toUpperCase(), scaledX + 4, scaledY > 20 ? scaledY - 7 : scaledY + 14);
-
-        const tag = document.createElement('span');
-        tag.className = 'tag';
-        tag.innerText = `🎯 ${pred.class} (${Math.round(pred.score * 100)}%)`;
-        tagsContainer.appendChild(tag);
-      });
-
-      primaryMatch = predictions[0].class;
+      // Extract unique list of detected items sorted alphabetically
+      const detectedClasses = [...new Set(predictions.map(p => p.class.toLowerCase()))].sort();
+      
+      // Check for multi-object combinations first (e.g., "person+dog")
+      const combinedKey = detectedClasses.slice(0, 2).join("+");
+      
+      if (AUDIO_DATABASE[combinedKey]) {
+        sceneKey = combinedKey;
+      } else if (AUDIO_DATABASE[detectedClasses[0]]) {
+        sceneKey = detectedClasses[0];
+      }
     } else {
-      // Fallback Color Analysis for Nature Scenery (Trees / Mountains / Water)
-      const colorMatch = analyzeLandscapeColor(img);
-      primaryMatch = colorMatch;
-
-      const tag = document.createElement('span');
-      tag.className = 'tag';
-      tag.innerText = `🏞️ Landscape: ${colorMatch.toUpperCase()}`;
-      tagsContainer.appendChild(tag);
+      // Color-based landscape analysis fallback
+      sceneKey = analyzeLandscapeColor(img);
     }
 
-    const selectedLang = document.getElementById('languageSelect').value;
-    statusText.innerText = `Detected "${primaryMatch.toUpperCase()}". Playing ${selectedLang.toUpperCase()} music!`;
-    playMatchedSong(primaryMatch);
+    currentDetectedSceneKey = sceneKey;
+    statusText.innerText = "🎶 Auto-selected best track matching scene context!";
+    loadSongForScene(sceneKey);
   }
 
-  // Canvas RGB Color Fallback for Natural Scenery
   function analyzeLandscapeColor(img) {
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
@@ -402,35 +416,35 @@
     const step = 20;
 
     for (let i = 0; i < data.length; i += 4 * step) {
-      r += data[i];
-      g += data[i + 1];
-      b += data[i + 2];
+      r += data[i]; g += data[i + 1]; b += data[i + 2];
     }
 
     const total = data.length / (4 * step);
     r = r / total; g = g / total; b = b / total;
 
-    // Green dominance -> Trees/Forests
     if (g > r && g > b) return "tree";
-    // Blue dominance -> Sky/Water/Mountains
     if (b > r && b > g) return "mountain";
-
     return "default";
   }
 
-  function playMatchedSong(objectClass) {
+  function loadSongForScene(sceneKey, isRefetch = false) {
     const lang = document.getElementById('languageSelect').value;
-    let videoId;
+    const playlist = (AUDIO_DATABASE[sceneKey] && AUDIO_DATABASE[sceneKey][lang]) 
+      ? AUDIO_DATABASE[sceneKey][lang] 
+      : (AUDIO_DATABASE.default[lang] || AUDIO_DATABASE.default.english);
 
-    if (MUSIC_DB[objectClass] && MUSIC_DB[objectClass][lang]) {
-      videoId = MUSIC_DB[objectClass][lang];
-    } else {
-      videoId = MUSIC_DB.default[lang] || MUSIC_DB.default.hindi;
-    }
+    // Pick random song from playlist array if refetch is clicked
+    const songIndex = isRefetch ? Math.floor(Math.random() * playlist.length) : 0;
+    const selectedSong = playlist[songIndex];
 
-    if (player && player.loadVideoById) {
-      player.loadVideoById(videoId);
-    }
+    // Update UI Elements
+    document.getElementById('songTitle').innerText = selectedSong.title;
+    document.getElementById('songArtist').innerText = selectedSong.artist;
+    document.getElementById('lyricsBox').innerText = selectedSong.lyrics;
+    
+    audioPlayer.src = selectedSong.src;
+    document.getElementById('playerCard').style.display = 'flex';
+    audioPlayer.play();
   }
 </script>
 
