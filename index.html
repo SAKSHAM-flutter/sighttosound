@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SightToSound - Pixelverse AI Visual Music Matcher</title>
-  
+  <title>SightToSound — AI Visual Music Matcher</title>
+
   <!-- TensorFlow.js & COCO-SSD Object Detection Models -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
@@ -22,21 +22,21 @@
       --input-bg: #0f172a;
       --radius-lg: 20px;
       --radius-md: 12px;
+      --ok: #34d399;
     }
 
-    * { 
-      box-sizing: border-box; 
-      margin: 0; 
-      padding: 0; 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
 
+    html, body { height: 100%; }
+
     body {
       background: var(--bg);
-      background-image: 
-        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15), transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.12), transparent 40%);
       color: var(--text-main);
       min-height: 100vh;
       min-height: -webkit-fill-available;
@@ -44,9 +44,30 @@
       justify-content: center;
       align-items: center;
       padding: clamp(12px, 3vw, 24px);
+      position: relative;
+      overflow-x: hidden;
     }
 
-    /* Container System for Big & Small Screens */
+    /* Ambient drifting orbs — one orchestrated background motion, not scattered per-element effects */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 22s ease-in-out infinite;
+    }
+    .orb-1 { width: 380px; height: 380px; background: #6366f1; top: -10%; left: -10%; }
+    .orb-2 { width: 320px; height: 320px; background: #ec4899; bottom: -12%; right: -8%; animation-delay: -8s; }
+    .orb-3 { width: 260px; height: 260px; background: #38bdf8; top: 40%; right: 20%; animation-delay: -15s; opacity: 0.2; }
+
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -40px) scale(1.08); }
+      66% { transform: translate(-25px, 25px) scale(0.95); }
+    }
+
     .app-container {
       width: 100%;
       max-width: 900px;
@@ -57,30 +78,47 @@
       border-radius: var(--radius-lg);
       padding: clamp(16px, 4vw, 32px);
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      position: relative;
+      z-index: 1;
     }
 
-    header { 
-      text-align: center; 
-      margin-bottom: clamp(16px, 3vw, 28px); 
+    header {
+      text-align: center;
+      margin-bottom: clamp(16px, 3vw, 28px);
     }
-    
-    header h1 { 
-      font-size: clamp(1.8rem, 5vw, 2.8rem); 
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .vinyl-mini {
+      width: clamp(30px, 6vw, 40px);
+      height: clamp(30px, 6vw, 40px);
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #1e293b 0 18%, #0f172a 19% 30%, #1e293b 31% 100%);
+      border: 2px solid rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
       font-weight: 800;
       letter-spacing: -0.8px;
-      background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #38bdf8 100%); 
-      -webkit-background-clip: text; 
-      -webkit-text-fill-color: transparent; 
+      background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       line-height: 1.2;
     }
-    
-    header p { 
-      color: var(--text-muted); 
-      font-size: clamp(0.85rem, 2vw, 1rem); 
-      margin-top: 6px; 
+
+    header p {
+      color: var(--text-muted);
+      font-size: clamp(0.85rem, 2vw, 1rem);
+      margin-top: 6px;
     }
 
-    /* Control Panel Responsive Grid */
     .control-panel {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -88,20 +126,16 @@
       margin-bottom: clamp(16px, 3vw, 24px);
     }
 
-    .input-group { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 6px; 
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+
+    .input-group label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #cbd5e1;
     }
-    
-    .input-group label { 
-      font-size: 0.75rem; 
-      font-weight: 700; 
-      text-transform: uppercase; 
-      letter-spacing: 0.8px; 
-      color: #cbd5e1; 
-    }
-    
+
     select {
       background: var(--input-bg);
       color: #fff;
@@ -115,13 +149,9 @@
       width: 100%;
       transition: all 0.25s ease;
     }
-    
-    select:focus { 
-      border-color: var(--accent); 
-      box-shadow: 0 0 12px var(--accent-glow); 
-    }
 
-    /* Upload & Scanner Zone */
+    select:focus { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
     .drop-zone {
       border: 2px dashed rgba(255, 255, 255, 0.18);
       border-radius: var(--radius-lg);
@@ -138,18 +168,16 @@
       justify-content: center;
       align-items: center;
     }
-    
-    .drop-zone:hover, .drop-zone.dragover { 
-      border-color: var(--accent); 
-      background: rgba(99, 102, 241, 0.08); 
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.08);
     }
-    
+
     .drop-zone input { display: none; }
 
-    .drop-zone p {
-      font-size: clamp(0.9rem, 2.5vw, 1.05rem);
-      color: #e2e8f0;
-    }
+    .drop-zone p { font-size: clamp(0.9rem, 2.5vw, 1.05rem); color: #e2e8f0; }
+    .drop-zone .hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
 
     .media-preview-container {
       position: relative;
@@ -178,11 +206,24 @@
       animation: scan 2s infinite ease-in-out;
       z-index: 5;
     }
-    
-    @keyframes scan { 
-      0% { top: 0%; } 
-      50% { top: 96%; } 
-      100% { top: 0%; } 
+
+    @keyframes scan { 0% { top: 0%; } 50% { top: 96%; } 100% { top: 0%; } }
+
+    .detected-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .chip {
+      font-size: 0.72rem;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #c7d2fe;
+      padding: 4px 10px;
+      border-radius: 20px;
     }
 
     .status-badge {
@@ -191,9 +232,9 @@
       color: var(--text-muted);
       margin: 14px 0;
       min-height: 1.4em;
+      transition: color 0.3s ease;
     }
 
-    /* Custom Player Card & Adaptive Layout */
     .player-card {
       background: rgba(15, 23, 42, 0.9);
       border: 1px solid var(--card-border);
@@ -204,6 +245,12 @@
       flex-direction: column;
       gap: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .song-header {
@@ -217,25 +264,56 @@
       padding-bottom: 12px;
     }
 
-    .song-details {
-      flex: 1;
-      min-width: 180px;
-    }
+    .song-details { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 12px; }
 
-    .song-title { 
-      font-size: clamp(1.1rem, 3vw, 1.35rem); 
-      font-weight: 700; 
+    .vinyl {
+      width: clamp(44px, 8vw, 56px);
+      height: clamp(44px, 8vw, 56px);
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #38bdf8 0 8%, #0f172a 9% 24%, #1e293b 25% 100%);
+      border: 2px solid rgba(255,255,255,0.15);
+      flex-shrink: 0;
+      animation: spin 4s linear infinite paused;
+    }
+    .vinyl.playing { animation-play-state: running; }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .song-text-wrap { min-width: 0; }
+
+    .song-title {
+      font-size: clamp(1.1rem, 3vw, 1.35rem);
+      font-weight: 700;
       color: #38bdf8;
       line-height: 1.3;
-    }
-    
-    .song-artist { 
-      font-size: clamp(0.8rem, 2vw, 0.9rem); 
-      color: var(--text-muted); 
-      margin-top: 2px; 
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* Interactive Unique Button */
+    .song-artist { font-size: clamp(0.8rem, 2vw, 0.9rem); color: var(--text-muted); margin-top: 2px; }
+
+    .eq-bars {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 14px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .eq-bars span {
+      width: 3px;
+      background: #38bdf8;
+      border-radius: 2px;
+      animation: eq 0.8s ease-in-out infinite;
+      opacity: 0.4;
+    }
+    .eq-bars.active span { opacity: 1; }
+    .eq-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
+    .eq-bars span:nth-child(2) { height: 100%; animation-delay: 0.2s; }
+    .eq-bars span:nth-child(3) { height: 65%; animation-delay: 0.4s; }
+    @keyframes eq { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+
     .btn-remix {
       background: var(--accent-gradient);
       color: white;
@@ -251,31 +329,15 @@
       gap: 8px;
       min-height: 44px;
       box-shadow: 0 4px 18px rgba(236, 72, 153, 0.35);
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      animation: soft-pulse 3s infinite;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
       white-space: nowrap;
     }
-    
-    .btn-remix:hover {
-      transform: translateY(-2px) scale(1.03);
-      box-shadow: 0 8px 25px rgba(236, 72, 153, 0.55);
-    }
-    
-    .btn-remix:active { 
-      transform: translateY(0) scale(0.98); 
-    }
 
-    @keyframes soft-pulse {
-      0%, 100% { box-shadow: 0 4px 18px rgba(236, 72, 153, 0.35); }
-      50% { box-shadow: 0 4px 28px rgba(99, 102, 241, 0.65); }
-    }
+    .btn-remix:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 25px rgba(236, 72, 153, 0.55); }
+    .btn-remix:active { transform: translateY(0) scale(0.97); }
+    .btn-remix:disabled { opacity: 0.5; cursor: default; transform: none; }
 
-    audio { 
-      width: 100%; 
-      height: 42px; 
-      border-radius: 8px; 
-      outline: none;
-    }
+    audio { width: 100%; height: 42px; border-radius: 8px; outline: none; }
 
     .lyrics-box {
       background: rgba(7, 10, 18, 0.8);
@@ -287,11 +349,17 @@
       font-size: clamp(0.85rem, 2.2vw, 0.95rem);
       line-height: 1.6;
       color: #cbd5e1;
-      white-space: pre-line;
       text-align: center;
     }
+    .lyrics-box .label {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
 
-    /* History Sequence Section */
     .history-card {
       background: rgba(7, 10, 18, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -312,11 +380,25 @@
       align-items: center;
     }
 
+    .clear-history-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      text-transform: none;
+      letter-spacing: 0;
+      padding: 4px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .clear-history-btn:hover { border-color: #ec4899; color: #ec4899; }
+
     .history-list {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 160px;
+      max-height: 200px;
       overflow-y: auto;
       padding-right: 2px;
     }
@@ -331,31 +413,14 @@
       border-radius: var(--radius-md);
       font-size: 0.85rem;
       gap: 10px;
+      animation: cardIn 0.3s ease;
     }
 
-    .history-item.active {
-      border-color: #38bdf8;
-      background: rgba(56, 189, 248, 0.08);
-    }
+    .history-item.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
 
-    .history-info {
-      display: flex;
-      align-items: center;
-      overflow: hidden;
-    }
-
-    .history-info-text {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .history-index {
-      font-weight: 800;
-      color: var(--accent);
-      margin-right: 10px;
-      min-width: 22px;
-    }
+    .history-info { display: flex; align-items: center; overflow: hidden; }
+    .history-info-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-index { font-weight: 800; color: var(--accent); margin-right: 10px; min-width: 22px; }
 
     .badge-lang {
       font-size: 0.7rem;
@@ -367,32 +432,54 @@
       white-space: nowrap;
     }
 
-    /* Custom Scrollbar Styling */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0f172a;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #f8fafc;
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 20;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-    /* Extra Mobile Adjustments */
     @media (max-width: 480px) {
-      .song-header {
-        flex-direction: column;
-        align-items: stretch;
-        text-align: center;
-      }
+      .song-header { flex-direction: column; align-items: stretch; text-align: center; }
+      .song-details { justify-content: center; }
+      .btn-remix { width: 100%; }
+    }
 
-      .btn-remix {
-        width: 100%;
-      }
+    @media (prefers-reduced-motion: reduce) {
+      .orb, .vinyl, .eq-bars span, .btn-remix { animation: none !important; }
     }
   </style>
 </head>
 <body>
 
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
 <div class="app-container">
   <header>
-    <h1>SightToSound</h1>
-    <p>AI Visual Music Matcher</p>
+    <div class="logo-row">
+      <div class="vinyl-mini"></div>
+      <h1>SightToSound</h1>
+    </div>
+    <p>Upload a photo, get a soundtrack that matches what's in it</p>
   </header>
 
   <div class="control-panel">
@@ -419,22 +506,30 @@
 
   <div class="drop-zone" id="dropZone">
     <div class="scanner-line" id="scannerLine"></div>
-    <p id="uploadText">📁 Drag & Drop an image here or <b>Click to Browse</b></p>
+    <p id="uploadText">📁 Drag & drop an image here or <b>click to browse</b></p>
+    <p class="hint" id="uploadHint">Works best with photos of people, pets, nature, or city scenes</p>
     <input type="file" id="imageInput" accept="image/*">
-    
+
     <div class="media-preview-container" id="previewContainer">
       <img id="imagePreview" alt="Upload Preview">
     </div>
   </div>
 
-  <p class="status-badge" id="statusText">System Ready. Upload an image to start audio generation.</p>
+  <div class="detected-chips" id="detectedChips"></div>
 
-  <!-- Custom Player Card & Lyrics -->
+  <p class="status-badge" id="statusText">Loading visual analysis engine…</p>
+
   <div class="player-card" id="playerCard">
     <div class="song-header">
       <div class="song-details">
-        <div class="song-title" id="songTitle">Song Title</div>
-        <div class="song-artist" id="songArtist">Artist Name</div>
+        <div class="vinyl" id="vinylIcon"></div>
+        <div class="song-text-wrap">
+          <div class="song-title" id="songTitle">
+            <span id="songTitleText">Song Title</span>
+            <span class="eq-bars" id="eqBars"><span></span><span></span><span></span></span>
+          </div>
+          <div class="song-artist" id="songArtist">Artist Name</div>
+        </div>
       </div>
       <button class="btn-remix" id="remixBtn">✨ Remix Vibe</button>
     </div>
@@ -442,27 +537,35 @@
     <audio id="audioPlayer" controls></audio>
 
     <div class="lyrics-box" id="lyricsBox">
-      Lyrics will appear here once audio loads...
+      <span class="label">Vibe note</span>
+      <span id="lyricsText">Pick an image to see a track's mood description here.</span>
     </div>
   </div>
 
-  <!-- Real-time Suggested History Log -->
   <div class="history-card" id="historyCard">
-    <h3>📜 Suggested Track History <span id="historyCount">(0)</span></h3>
+    <h3>
+      📜 Suggested Track History <span id="historyCount">(0)</span>
+      <button class="clear-history-btn" id="clearHistoryBtn">Clear</button>
+    </h3>
     <div class="history-list" id="historyList"></div>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
   // =========================================================================
-  // 1. ANTI-INSPECT PROTECTION LAYER
+  // 1. ANTI-INSPECT PROTECTION LAYER (kept from original — your call to keep
+  //    in production; note this only deters casual viewing, not a real
+  //    security boundary, since anyone can still read network/page source
+  //    through other means).
   // =========================================================================
 
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
   document.addEventListener('keydown', (e) => {
     if (
-      e.key === 'F12' || 
+      e.key === 'F12' ||
       (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) ||
       (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
     ) {
@@ -481,67 +584,226 @@
   }, 1000);
 
   // =========================================================================
-  // 2. AUDIO DATABASE & SCENE MATCHING ENGINE
+  // 2. AUDIO DATABASE
+  //    NOTE FOR PRODUCTION: the `src` fields below point at SoundHelix demo
+  //    instrumentals as placeholders for the named track — they are not the
+  //    actual copyrighted recordings. Before shipping this publicly, wire
+  //    `src` up to a licensed streaming/catalog API (Spotify, JioSaavn,
+  //    Saavn, YouTube Music, etc.) for the real audio.
   // =========================================================================
 
+  const DEMO_SRC = (n) => `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${n}.mp3`;
+
+  // Each song: { title, artist, mood: [...], vibe: short original description (not lyrics), src }
   const AUDIO_DATABASE = {
     "person": {
       hindi: [
-        { title: "Zindagi Ek Safar", artist: "Kishore Kumar", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", lyrics: "Zindagi ek safar hai suhana\nYahan kal kya ho kisne jaana\nOho zindagi ek safar hai suhana..." },
-        { title: "Phir Se Udd Chala", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", lyrics: "Phir se udd chala\nKahi door door door...\nKabhi daal daal kabhi paat paat..." },
-        { title: "Safarnama", artist: "Lucky Ali", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", lyrics: "O Safarnama... Sawaar ne laga\nMera rastaa... tanaane tanaane..." }
+        { title: "Zindagi Ek Safar", artist: "Kishore Kumar", mood: ["upbeat", "chill"], vibe: "A warm, wandering ode to embracing life's unpredictable journey.", src: DEMO_SRC(1) },
+        { title: "Phir Se Udd Chala", artist: "Mohit Chauhan", mood: ["chill"], vibe: "A soaring, free-spirited track about drifting wherever the wind leads.", src: DEMO_SRC(2) },
+        { title: "Safarnama", artist: "Lucky Ali", mood: ["chill", "romantic"], vibe: "A gentle travel anthem with a nostalgic, unhurried melody.", src: DEMO_SRC(3) },
+        { title: "Kar Har Maidaan Fateh", artist: "Sukhwinder Singh", mood: ["upbeat"], vibe: "A driving, motivational track built for big personal moments.", src: DEMO_SRC(4) }
       ],
       english: [
-        { title: "Happy Vibe", artist: "Pharrell Williams", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", lyrics: "It might seem crazy what I'm 'bout to say\nSunshine she's here, you can take a break..." },
-        { title: "Acoustic Sunset", artist: "John Mayer", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", lyrics: "Shadows in the open air\nBreeze through the quiet hair..." }
+        { title: "Happy Vibe", artist: "Pharrell Williams", mood: ["upbeat"], vibe: "A sunny, clap-along track about shaking off a bad mood.", src: DEMO_SRC(5) },
+        { title: "Acoustic Sunset", artist: "John Mayer", mood: ["chill", "romantic"], vibe: "A mellow guitar-led piece for golden-hour moments.", src: DEMO_SRC(6) },
+        { title: "Good Life", artist: "OneRepublic", mood: ["upbeat"], vibe: "An anthemic, feel-good track celebrating everyday adventure.", src: DEMO_SRC(7) }
+      ],
+      bengali: [
+        { title: "Ekla Cholo Re", artist: "Rabindra Sangeet", mood: ["chill"], vibe: "A resolute solo-journey tune about walking your own path.", src: DEMO_SRC(8) }
+      ],
+      punjabi: [
+        { title: "Ik Kudi", artist: "Gurdas Maan", mood: ["romantic", "chill"], vibe: "A tender folk-rooted melody about quiet affection.", src: DEMO_SRC(9) }
+      ],
+      spanish: [
+        { title: "Vivir Mi Vida", artist: "Marc Anthony", mood: ["upbeat"], vibe: "A salsa-driven celebration of living fully in the moment.", src: DEMO_SRC(10) }
       ]
     },
     "person+dog": {
       hindi: [
-        { title: "Tera Yaar Hoon Main", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", lyrics: "Tu jo rootha toh kaun hansega\nTu jo chhoota toh kaun rahega\nTu hi toh hai mera dost..." },
-        { title: "Yaaron Dosti", artist: "KK", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", lyrics: "Yaaron dosti badi hi haseen hai\nYeh na ho toh kya phir bolo yeh zindagi hai..." }
+        { title: "Tera Yaar Hoon Main", artist: "Arijit Singh", mood: ["romantic", "chill"], vibe: "A heartfelt track about loyal, unconditional friendship.", src: DEMO_SRC(11) },
+        { title: "Yaaron Dosti", artist: "KK", mood: ["upbeat", "chill"], vibe: "A warm singalong celebrating companionship.", src: DEMO_SRC(12) }
       ],
       english: [
-        { title: "Count On Me", artist: "Bruno Mars", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", lyrics: "If you ever find yourself stuck in the middle of the sea\nI'll sail the world to find you..." }
+        { title: "Count On Me", artist: "Bruno Mars", mood: ["upbeat", "chill"], vibe: "A breezy, ukulele-tinged promise of always showing up.", src: DEMO_SRC(13) },
+        { title: "Best Day of My Life", artist: "American Authors", mood: ["upbeat"], vibe: "A bright, bounding track about small perfect days.", src: DEMO_SRC(14) }
+      ]
+    },
+    "dog": {
+      hindi: [
+        { title: "Yaaron Dosti", artist: "KK", mood: ["upbeat", "chill"], vibe: "A warm singalong celebrating companionship.", src: DEMO_SRC(12) }
+      ],
+      english: [
+        { title: "Good Vibrations", artist: "Studio Session", mood: ["upbeat"], vibe: "A playful, upbeat instrumental with a bouncy rhythm.", src: DEMO_SRC(15) }
       ]
     },
     "car+mountain": {
       hindi: [
-        { title: "Yun Hi Chala Chal", artist: "Udit Narayan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", lyrics: "Yun hi chala chal rahi\nKitni haseen hai yeh duniya\nPhoolon bhari yeh raahein..." },
-        { title: "Dil Chahta Hai", artist: "Shankar Mahadevan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", lyrics: "Dil chahta hai kabhi na beete chamkeele din..." }
+        { title: "Yun Hi Chala Chal", artist: "Udit Narayan", mood: ["chill", "upbeat"], vibe: "A rolling road-trip tune about the beauty of the open path.", src: DEMO_SRC(16) },
+        { title: "Dil Chahta Hai", artist: "Shankar Mahadevan", mood: ["upbeat", "chill"], vibe: "A carefree title track built for long drives with friends.", src: DEMO_SRC(1) }
+      ],
+      english: [
+        { title: "Life Is a Highway", artist: "Rascal Flatts", mood: ["upbeat"], vibe: "A driving, wide-open-road anthem.", src: DEMO_SRC(2) }
       ]
     },
-    "tree": {
+    "car": {
       hindi: [
-        { title: "Hawaa Hawaa", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", lyrics: "Hawaa hawaa aaye hawaa\nKhushboo luta de hawaa..." }
+        { title: "Chaiyya Chaiyya", artist: "Sukhwinder Singh", mood: ["upbeat"], vibe: "A rhythmic, percussion-heavy travel classic.", src: DEMO_SRC(3) }
+      ],
+      english: [
+        { title: "Drive", artist: "Studio Session", mood: ["chill"], vibe: "A smooth synth-led instrumental for cruising.", src: DEMO_SRC(4) }
       ]
     },
     "mountain": {
       hindi: [
-        { title: "Yeh Haseen Waadiyan", artist: "A.R. Rahman", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", lyrics: "Yeh haseen waadiyan yeh khula aasmaan\nAa gaye hum kahan ae mere saajna..." }
+        { title: "Yeh Haseen Waadiyan", artist: "A.R. Rahman", mood: ["romantic", "chill"], vibe: "A sweeping ballad about vast, breathtaking valleys.", src: DEMO_SRC(5) },
+        { title: "Kun Faya Kun", artist: "A.R. Rahman", mood: ["chill", "romantic"], vibe: "A meditative, devotional-leaning track with a calm rise.", src: DEMO_SRC(6) }
+      ],
+      english: [
+        { title: "Higher Ground", artist: "Studio Session", mood: ["upbeat", "chill"], vibe: "An airy, ascending instrumental fit for scenic heights.", src: DEMO_SRC(7) }
+      ]
+    },
+    "tree": {
+      hindi: [
+        { title: "Hawaa Hawaa", artist: "Mohit Chauhan", mood: ["chill", "upbeat"], vibe: "A breezy folk-pop track about wind through open fields.", src: DEMO_SRC(8) }
+      ],
+      english: [
+        { title: "Forest Walk", artist: "Studio Session", mood: ["chill"], vibe: "A soft acoustic instrumental with birdsong-like textures.", src: DEMO_SRC(9) }
+      ]
+    },
+    "beach": {
+      hindi: [
+        { title: "Sahiba", artist: "Jasleen Royal", mood: ["romantic", "chill"], vibe: "A gentle coastal love song with a light, airy tone.", src: DEMO_SRC(10) }
+      ],
+      english: [
+        { title: "Ocean Eyes", artist: "Studio Session", mood: ["chill", "romantic"], vibe: "A dreamy, wave-like instrumental with soft reverb.", src: DEMO_SRC(11) }
+      ]
+    },
+    "water": {
+      hindi: [
+        { title: "Nadiya Paar", artist: "Various Artists", mood: ["chill"], vibe: "A flowing folk melody built around a river crossing.", src: DEMO_SRC(12) }
+      ],
+      english: [
+        { title: "River Flow", artist: "Studio Session", mood: ["chill"], vibe: "A calm piano-led piece that mirrors moving water.", src: DEMO_SRC(13) }
+      ]
+    },
+    "city": {
+      hindi: [
+        { title: "Bombay Meri Jaan", artist: "Various Artists", mood: ["upbeat"], vibe: "An energetic ode to city lights and street life.", src: DEMO_SRC(14) }
+      ],
+      english: [
+        { title: "Uptown Lights", artist: "Studio Session", mood: ["upbeat"], vibe: "A punchy, synth-driven track built for skylines at night.", src: DEMO_SRC(15) }
+      ]
+    },
+    "food": {
+      hindi: [
+        { title: "Zingaat", artist: "Ajay-Atul", mood: ["upbeat"], vibe: "A festive, high-energy track for shared celebration.", src: DEMO_SRC(16) }
+      ],
+      english: [
+        { title: "Kitchen Groove", artist: "Studio Session", mood: ["upbeat", "chill"], vibe: "A funky, light-footed instrumental with a relaxed swing.", src: DEMO_SRC(1) }
+      ]
+    },
+    "night": {
+      hindi: [
+        { title: "Raabta", artist: "Arijit Singh", mood: ["romantic", "chill"], vibe: "A moody nighttime love theme with a slow build.", src: DEMO_SRC(2) }
+      ],
+      english: [
+        { title: "Midnight City Lights", artist: "Studio Session", mood: ["chill", "romantic"], vibe: "A slow-burning synth piece for late hours.", src: DEMO_SRC(3) }
       ]
     },
     "default": {
       hindi: [
-        { title: "Ilahi (Lofi Remix)", artist: "Arijit Singh", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", lyrics: "Shaam bhi koi jaise hai nadi\nLehron lehar jaise beh rahi...\nIlahi mera jee aaye aaye..." },
-        { title: "Matargashti", artist: "Mohit Chauhan", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", lyrics: "Matargashti khuli sadak mein\nMukhtasar ho baatein..." }
+        { title: "Ilahi (Lofi Remix)", artist: "Arijit Singh", mood: ["chill"], vibe: "A dreamy, reflective track with a gentle flowing rhythm.", src: DEMO_SRC(4) },
+        { title: "Matargashti", artist: "Mohit Chauhan", mood: ["upbeat", "chill"], vibe: "A carefree wandering tune about aimless exploration.", src: DEMO_SRC(5) },
+        { title: "Ilahi", artist: "Arijit Singh", mood: ["romantic"], vibe: "A soft, searching ballad about finding your place.", src: DEMO_SRC(6) }
       ],
       english: [
-        { title: "Acoustic Journey", artist: "Studio Track", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", lyrics: "Walking down the open trail\nUnderneath the gentle rain..." }
+        { title: "Acoustic Journey", artist: "Studio Track", mood: ["chill"], vibe: "A gentle instrumental that suits any quiet scene.", src: DEMO_SRC(7) },
+        { title: "Open Road", artist: "Studio Track", mood: ["upbeat"], vibe: "A light, optimistic instrumental for general moments.", src: DEMO_SRC(8) }
+      ],
+      bengali: [
+        { title: "Amar Sonar Bangla (Instrumental)", artist: "Studio Track", mood: ["chill", "romantic"], vibe: "A gentle instrumental rendition with a nostalgic tone.", src: DEMO_SRC(9) }
+      ],
+      punjabi: [
+        { title: "Chan Kithan", artist: "Studio Track", mood: ["romantic", "chill"], vibe: "A folk-flavored soft melody about a distant moon.", src: DEMO_SRC(10) }
+      ],
+      spanish: [
+        { title: "Camino Tranquilo", artist: "Studio Track", mood: ["chill"], vibe: "A relaxed acoustic guitar piece for any calm scene.", src: DEMO_SRC(11) }
       ]
     }
   };
 
+  // =========================================================================
+  // 3. STATE
+  // =========================================================================
+
   let model;
   let currentDetectedSceneKey = "default";
-  let currentTrackIndex = 0;
   let imageHistory = [];
+  const PLAYED_KEY = "sts_played_songs_v1";
+  const HISTORY_KEY = "sts_history_v1";
+
+  function loadPlayedSet() {
+    try { return new Set(JSON.parse(localStorage.getItem(PLAYED_KEY) || "[]")); }
+    catch (e) { return new Set(); }
+  }
+  function savePlayedSet(set) {
+    localStorage.setItem(PLAYED_KEY, JSON.stringify([...set]));
+  }
+  function songKey(song) { return `${song.title}::${song.artist}`; }
+
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
+    catch (e) { return []; }
+  }
+  function saveHistory() {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(imageHistory));
+  }
+
+  imageHistory = loadHistory();
+
+  // =========================================================================
+  // 4. SCENE + LANGUAGE + MOOD RESOLUTION AND UNIQUE PICKING
+  // =========================================================================
+
+  function resolvePool(sceneKey, language, mood) {
+    const scene = AUDIO_DATABASE[sceneKey] || AUDIO_DATABASE["default"];
+    let pool = scene[language] || scene["english"] || AUDIO_DATABASE["default"]["english"];
+
+    const moodMatches = pool.filter(s => s.mood.includes(mood));
+    if (moodMatches.length > 0) return moodMatches;
+    return pool; // fall back to full scene pool if nothing matches the mood
+  }
+
+  // Picks a song from the pool that hasn't been played before. If every song
+  // in this specific pool has already been played, only that pool's entries
+  // are released back into circulation (global history for everything else
+  // stays intact), so variety keeps coming from other scenes/moods too.
+  function pickUniqueSong(pool) {
+    const played = loadPlayedSet();
+    let available = pool.filter(s => !played.has(songKey(s)));
+
+    if (available.length === 0) {
+      pool.forEach(s => played.delete(songKey(s)));
+      savePlayedSet(played);
+      available = pool;
+    }
+
+    const song = available[Math.floor(Math.random() * available.length)];
+    const updatedPlayed = loadPlayedSet();
+    updatedPlayed.add(songKey(song));
+    savePlayedSet(updatedPlayed);
+    return song;
+  }
+
+  // =========================================================================
+  // 5. VISUAL ANALYSIS
+  // =========================================================================
 
   async function initAI() {
     const statusText = document.getElementById('statusText');
-    statusText.innerText = "⚡ Loading visual analysis engine...";
+    statusText.innerText = "⚡ Loading visual analysis engine…";
     model = await cocoSsd.load();
-    statusText.innerText = "✅ Engine Ready! Upload an image to play music.";
+    statusText.innerText = "✅ Ready — upload an image to get a matching track.";
   }
   initAI();
 
@@ -550,6 +812,9 @@
   const audioPlayer = document.getElementById('audioPlayer');
   const remixBtn = document.getElementById('remixBtn');
   const languageSelect = document.getElementById('languageSelect');
+  const vibeSelect = document.getElementById('vibeSelect');
+  const vinylIcon = document.getElementById('vinylIcon');
+  const eqBars = document.getElementById('eqBars');
 
   dropZone.addEventListener('click', () => imageInput.click());
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -565,13 +830,29 @@
   });
 
   remixBtn.addEventListener('click', () => {
-    currentTrackIndex++;
-    loadSongForScene(currentDetectedSceneKey, true);
+    const language = languageSelect.value;
+    const mood = vibeSelect.value;
+    const pool = resolvePool(currentDetectedSceneKey, language, mood);
+    const song = pickUniqueSong(pool);
+    playSong(song, currentDetectedSceneKey, language, mood);
+    showToast("Remixed! Playing a new match.");
   });
 
   languageSelect.addEventListener('change', () => {
-    currentTrackIndex = 0;
-    loadSongForScene(currentDetectedSceneKey, false);
+    if (document.getElementById('playerCard').style.display !== 'flex') return;
+    const language = languageSelect.value;
+    const mood = vibeSelect.value;
+    const pool = resolvePool(currentDetectedSceneKey, language, mood);
+    const song = pickUniqueSong(pool);
+    playSong(song, currentDetectedSceneKey, language, mood);
+  });
+
+  vibeSelect.addEventListener('change', () => {
+    const language = languageSelect.value;
+    const mood = vibeSelect.value;
+    const pool = resolvePool(currentDetectedSceneKey, language, mood);
+    const song = pickUniqueSong(pool);
+    playSong(song, currentDetectedSceneKey, language, mood);
   });
 
   function processFile(file) {
@@ -579,29 +860,26 @@
     reader.onload = (event) => {
       const img = document.getElementById('imagePreview');
       img.src = event.target.result;
-      
+
       document.getElementById('previewContainer').style.display = 'flex';
       document.getElementById('uploadText').style.display = 'none';
+      document.getElementById('uploadHint').style.display = 'none';
 
-      imageHistory = [];
-      currentTrackIndex = 0;
-      updateHistoryUI();
-      
-      img.onload = async () => {
-        await analyzeAndPlay(img);
-      };
+      img.onload = async () => { await analyzeAndPlay(img); };
     };
     reader.readAsDataURL(file);
   }
 
   async function analyzeAndPlay(img) {
     if (!model) return;
-    
+
     const scanner = document.getElementById('scannerLine');
     const statusText = document.getElementById('statusText');
+    const chipsBox = document.getElementById('detectedChips');
+    chipsBox.innerHTML = "";
 
     scanner.style.display = 'block';
-    statusText.innerText = "🔍 Processing visual elements & scene context...";
+    statusText.innerText = "🔍 Analyzing what's in the image…";
 
     const predictions = await model.detect(img);
     scanner.style.display = 'none';
@@ -611,101 +889,145 @@
     if (predictions.length > 0) {
       const detectedClasses = [...new Set(predictions.map(p => p.class.toLowerCase()))].sort();
       const combinedKey = detectedClasses.slice(0, 2).join("+");
-      
+
       if (AUDIO_DATABASE[combinedKey]) {
         sceneKey = combinedKey;
       } else if (AUDIO_DATABASE[detectedClasses[0]]) {
         sceneKey = detectedClasses[0];
       }
+
+      detectedClasses.slice(0, 5).forEach(cls => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = cls;
+        chipsBox.appendChild(chip);
+      });
     } else {
       sceneKey = analyzeLandscapeColor(img);
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = `scene: ${sceneKey}`;
+      chipsBox.appendChild(chip);
     }
 
     currentDetectedSceneKey = sceneKey;
-    statusText.innerText = "🎶 Auto-selected best track matching scene context!";
-    loadSongForScene(sceneKey);
+    statusText.innerText = "🎶 Found a track that matches this scene!";
+
+    const language = languageSelect.value;
+    const mood = vibeSelect.value;
+    const pool = resolvePool(sceneKey, language, mood);
+    const song = pickUniqueSong(pool);
+    playSong(song, sceneKey, language, mood);
   }
 
+  // Lightweight fallback scene guesser for images with no COCO-SSD detections
+  // (e.g. pure landscapes). Samples average color from a downscaled canvas.
   function analyzeLandscapeColor(img) {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = img.naturalWidth;
-    tempCanvas.height = img.naturalHeight;
-    tempCtx.drawImage(img, 0, 0);
+    const canvas = document.createElement('canvas');
+    const w = 40, h = 40;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
 
-    const data = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-    let r = 0, g = 0, b = 0;
-    const step = 20;
-
-    for (let i = 0; i < data.length; i += 4 * step) {
-      r += data[i]; g += data[i + 1]; b += data[i + 2];
+    let r = 0, g = 0, b = 0, count = 0;
+    try {
+      const data = ctx.getImageData(0, 0, w, h).data;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i]; g += data[i + 1]; b += data[i + 2];
+        count++;
+      }
+    } catch (e) {
+      return "default";
     }
+    r /= count; g /= count; b /= count;
+    const brightness = (r + g + b) / 3;
 
-    const total = data.length / (4 * step);
-    r = r / total; g = g / total; b = b / total;
-
+    if (brightness < 60) return "night";
+    if (b > r && b > g && b > 140) return AUDIO_DATABASE["beach"] ? "beach" : "water";
     if (g > r && g > b) return "tree";
-    if (b > r && b > g) return "mountain";
+    if (r > 120 && g > 90 && b < 100) return "mountain";
     return "default";
   }
 
-  function loadSongForScene(sceneKey, isRemix = false) {
-    const lang = document.getElementById('languageSelect').value;
-    const playlist = (AUDIO_DATABASE[sceneKey] && AUDIO_DATABASE[sceneKey][lang]) 
-      ? AUDIO_DATABASE[sceneKey][lang] 
-      : (AUDIO_DATABASE.default[lang] || AUDIO_DATABASE.default.english);
+  // =========================================================================
+  // 6. PLAYER + HISTORY UI
+  // =========================================================================
 
-    const songIndex = currentTrackIndex % playlist.length;
-    const selectedSong = playlist[songIndex];
-
-    document.getElementById('songTitle').innerText = selectedSong.title;
-    document.getElementById('songArtist').innerText = selectedSong.artist;
-    document.getElementById('lyricsBox').innerText = selectedSong.lyrics;
-    
-    audioPlayer.src = selectedSong.src;
+  function playSong(song, sceneKey, language, mood) {
     document.getElementById('playerCard').style.display = 'flex';
-    audioPlayer.play();
+    document.getElementById('songTitleText').textContent = song.title;
+    document.getElementById('songArtist').textContent = song.artist;
+    document.getElementById('lyricsText').textContent = song.vibe;
+    audioPlayer.src = song.src;
+    audioPlayer.play().catch(() => {});
 
-    const historyItem = { title: selectedSong.title, artist: selectedSong.artist, lang: lang.toUpperCase() };
-    if (!imageHistory.length || imageHistory[imageHistory.length - 1].title !== selectedSong.title) {
-      imageHistory.push(historyItem);
-      updateHistoryUI();
-    }
+    vinylIcon.classList.add('playing');
+    eqBars.classList.add('active');
+
+    audioPlayer.onpause = () => { vinylIcon.classList.remove('playing'); eqBars.classList.remove('active'); };
+    audioPlayer.onplay = () => { vinylIcon.classList.add('playing'); eqBars.classList.add('active'); };
+
+    imageHistory.unshift({ sceneKey, language, mood, title: song.title, artist: song.artist, time: Date.now() });
+    if (imageHistory.length > 30) imageHistory = imageHistory.slice(0, 30);
+    saveHistory();
+    renderHistory();
   }
 
-  function updateHistoryUI() {
+  const LANG_FLAG = { hindi: "🇮🇳", english: "🌐", bengali: "🇧🇩", spanish: "🇪🇸", punjabi: "🪕" };
+  const MOOD_ICON = { upbeat: "⚡", chill: "🌙", romantic: "💗" };
+
+  function renderHistory() {
     const historyCard = document.getElementById('historyCard');
-    const historyList = document.getElementById('historyList');
-    const historyCount = document.getElementById('historyCount');
+    const list = document.getElementById('historyList');
+    const count = document.getElementById('historyCount');
 
     if (imageHistory.length === 0) {
       historyCard.style.display = 'none';
       return;
     }
-
     historyCard.style.display = 'block';
-    historyCount.innerText = `(${imageHistory.length})`;
-    historyList.innerHTML = '';
+    count.textContent = `(${imageHistory.length})`;
+    list.innerHTML = "";
 
-    imageHistory.slice().reverse().forEach((item, index) => {
-      const realSequenceIndex = imageHistory.length - index;
-      const isCurrent = index === 0;
-
-      const div = document.createElement('div');
-      div.className = `history-item ${isCurrent ? 'active' : ''}`;
-      div.innerHTML = `
+    imageHistory.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'history-item' + (idx === 0 ? ' active' : '');
+      row.innerHTML = `
         <div class="history-info">
-          <span class="history-index">#${realSequenceIndex}</span>
-          <div class="history-info-text">
-            <strong>${item.title}</strong> — <span style="color:#94a3b8">${item.artist}</span>
-          </div>
+          <span class="history-index">${imageHistory.length - idx}</span>
+          <span class="history-info-text">${escapeHtml(item.title)} — ${escapeHtml(item.artist)}</span>
         </div>
-        <span class="badge-lang">${item.lang}</span>
+        <span class="badge-lang">${LANG_FLAG[item.language] || ""} ${MOOD_ICON[item.mood] || ""}</span>
       `;
-      historyList.appendChild(div);
+      list.appendChild(row);
     });
   }
-</script>
 
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+    imageHistory = [];
+    saveHistory();
+    localStorage.removeItem(PLAYED_KEY);
+    renderHistory();
+    showToast("History cleared — tracks can repeat again.");
+  });
+
+  let toastTimer;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  renderHistory();
+</script>
 </body>
 </html>
