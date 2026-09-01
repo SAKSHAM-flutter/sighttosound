@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SightToSound - AI Visual Music Matcher</title>
+  <title>SightToSound - Full Multi-Object Internet Archive Matcher</title>
   
   <!-- TensorFlow.js & COCO-SSD Object Detection Models -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
@@ -12,7 +12,7 @@
   <style>
     :root {
       --bg: #070a12;
-      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-bg: rgba(15, 23, 42, 0.85);
       --card-border: rgba(255, 255, 255, 0.12);
       --accent: #6366f1;
       --accent-glow: rgba(99, 102, 241, 0.45);
@@ -29,7 +29,6 @@
       margin: 0; 
       padding: 0; 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -47,7 +46,7 @@
 
     .app-container {
       width: 100%;
-      max-width: 900px;
+      max-width: 850px;
       background: var(--card-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -57,25 +56,22 @@
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
     }
 
-    header { text-align: center; margin-bottom: clamp(16px, 3vw, 28px); }
-    
+    header { text-align: center; margin-bottom: clamp(16px, 3vw, 24px); }
     header h1 { 
-      font-size: clamp(1.8rem, 5vw, 2.8rem); 
+      font-size: clamp(1.8rem, 5vw, 2.6rem); 
       font-weight: 800;
       letter-spacing: -0.8px;
       background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #38bdf8 100%); 
       -webkit-background-clip: text; 
       -webkit-text-fill-color: transparent; 
-      line-height: 1.2;
     }
-    
-    header p { color: var(--text-muted); font-size: clamp(0.85rem, 2vw, 1rem); margin-top: 6px; }
+    header p { color: var(--text-muted); font-size: clamp(0.85rem, 2vw, 0.95rem); margin-top: 4px; }
 
     .control-panel {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: clamp(10px, 2vw, 16px);
-      margin-bottom: clamp(16px, 3vw, 24px);
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
     }
 
     .input-group { display: flex; flex-direction: column; gap: 6px; }
@@ -85,69 +81,72 @@
       background: var(--input-bg);
       color: #fff;
       border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 12px 14px;
+      padding: 12px;
       border-radius: var(--radius-md);
       outline: none;
-      cursor: pointer;
       font-size: 0.95rem;
       min-height: 44px;
       width: 100%;
-      transition: all 0.25s ease;
     }
     select:focus { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
 
     .drop-zone {
       border: 2px dashed rgba(255, 255, 255, 0.18);
       border-radius: var(--radius-lg);
-      padding: clamp(20px, 4vw, 36px);
+      padding: clamp(20px, 4vw, 30px);
       text-align: center;
       cursor: pointer;
       position: relative;
       background: rgba(15, 23, 42, 0.4);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow: hidden;
+      transition: all 0.3s ease;
       min-height: 160px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
     }
-    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(99, 102, 241, 0.08); }
-    .drop-zone input { display: none; }
-    .drop-zone p { font-size: clamp(0.9rem, 2.5vw, 1.05rem); color: #e2e8f0; }
+    .drop-zone:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.08); }
+    .drop-zone input[type="file"] { display: none; }
 
     .media-preview-container {
       position: relative;
       width: 100%;
-      max-width: 100%;
       margin-top: 10px;
       display: none;
       justify-content: center;
-      align-items: center;
     }
-
     .media-preview-container img {
       max-width: 100%;
-      max-height: clamp(200px, 40vh, 320px);
+      max-height: clamp(200px, 35vh, 280px);
       object-fit: contain;
       border-radius: var(--radius-md);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
     }
 
-    .scanner-line {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 4px;
-      background: linear-gradient(90deg, transparent, #38bdf8, #ec4899, transparent);
-      box-shadow: 0 0 15px #38bdf8;
-      display: none;
-      animation: scan 2s infinite ease-in-out;
-      z-index: 5;
+    .meta-tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
     }
-    @keyframes scan { 0% { top: 0%; } 50% { top: 96%; } 100% { top: 0%; } }
+    .tag-chip {
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #a5b4fc;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .tag-chip.object-chip {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+    }
 
     .status-badge {
       text-align: center;
-      font-size: clamp(0.8rem, 2vw, 0.9rem);
+      font-size: 0.88rem;
       color: var(--text-muted);
       margin: 14px 0;
       min-height: 1.4em;
@@ -157,28 +156,24 @@
       background: rgba(15, 23, 42, 0.9);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-lg);
-      padding: clamp(14px, 3vw, 22px);
+      padding: 18px;
       margin-top: 14px;
       display: none;
       flex-direction: column;
       gap: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .song-header {
       display: flex;
-      flex-direction: row;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding-bottom: 12px;
     }
 
     .song-details { flex: 1; min-width: 180px; }
-    .song-title { font-size: clamp(1.1rem, 3vw, 1.35rem); font-weight: 700; color: #38bdf8; line-height: 1.3; }
-    .song-artist { font-size: clamp(0.8rem, 2vw, 0.9rem); color: var(--text-muted); margin-top: 2px; }
+    .song-title { font-size: 1.2rem; font-weight: 700; color: #38bdf8; }
+    .song-artist { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
 
     .btn-remix {
       background: var(--accent-gradient);
@@ -187,89 +182,32 @@
       padding: 10px 20px;
       border-radius: 30px;
       font-weight: 700;
-      font-size: clamp(0.85rem, 2.2vw, 0.95rem);
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 44px;
-      box-shadow: 0 4px 18px rgba(236, 72, 153, 0.35);
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      animation: soft-pulse 3s infinite;
-      white-space: nowrap;
+      min-height: 42px;
+      transition: transform 0.2s ease;
     }
-    .btn-remix:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 25px rgba(236, 72, 153, 0.55); }
-    .btn-remix:active { transform: translateY(0) scale(0.98); }
+    .btn-remix:hover { transform: scale(1.03); }
 
-    @keyframes soft-pulse {
-      0%, 100% { box-shadow: 0 4px 18px rgba(236, 72, 153, 0.35); }
-      50% { box-shadow: 0 4px 28px rgba(99, 102, 241, 0.65); }
-    }
-
-    audio { width: 100%; height: 42px; border-radius: 8px; outline: none; }
+    audio { width: 100%; height: 42px; outline: none; margin-top: 6px; }
 
     .history-card {
       background: rgba(7, 10, 18, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: var(--radius-lg);
-      padding: clamp(14px, 3vw, 18px);
+      padding: 14px;
       margin-top: 14px;
       display: none;
     }
-
-    .history-card h3 {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-height: 160px;
-      overflow-y: auto;
-      padding-right: 2px;
-    }
-
+    .history-card h3 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; }
+    .history-list { display: flex; flex-direction: column; gap: 8px; max-height: 160px; overflow-y: auto; }
     .history-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: var(--input-bg);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-radius: var(--radius-md);
-      font-size: 0.85rem;
-      gap: 10px;
-    }
-
-    .history-item.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
-    .history-info { display: flex; align-items: center; overflow: hidden; }
-    .history-info-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .history-index { font-weight: 800; color: var(--accent); margin-right: 10px; min-width: 22px; }
-    
-    .badge-lang {
-      font-size: 0.7rem;
-      color: #94a3b8;
-      background: #020617;
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      white-space: nowrap;
-      text-decoration: none;
-    }
-    .badge-lang:hover { color: #38bdf8; }
-
-    @media (max-width: 480px) {
-      .song-header { flex-direction: column; align-items: stretch; text-align: center; }
-      .btn-remix { width: 100%; }
+      font-size: 0.82rem;
     }
   </style>
 </head>
@@ -278,7 +216,7 @@
 <div class="app-container">
   <header>
     <h1>SightToSound</h1>
-    <p>AI Visual YouTube Music Engine</p>
+    <p>Multi-Object Visual & Filter Music Matcher</p>
   </header>
 
   <div class="control-panel">
@@ -299,12 +237,12 @@
         <option value="upbeat">Upbeat & Energetic</option>
         <option value="chill" selected>Chill & Lofi</option>
         <option value="romantic">Romantic & Soft</option>
+        <option value="melancholic">Melancholic & Dark</option>
       </select>
     </div>
   </div>
 
   <div class="drop-zone" id="dropZone">
-    <div class="scanner-line" id="scannerLine"></div>
     <p id="uploadText">📁 Drag & Drop an image here or <b>Click to Browse</b></p>
     <input type="file" id="imageInput" accept="image/*">
     
@@ -313,13 +251,15 @@
     </div>
   </div>
 
-  <p class="status-badge" id="statusText">System Ready. Upload an image to start audio generation.</p>
+  <div class="meta-tags-row" id="tagContainer"></div>
+
+  <p class="status-badge" id="statusText">System Ready. Upload an image to start music matching.</p>
 
   <div class="player-card" id="playerCard">
     <div class="song-header">
       <div class="song-details">
-        <div class="song-title" id="songTitle">Resolving Audio...</div>
-        <div class="song-artist" id="songArtist">YouTube Engine</div>
+        <div class="song-title" id="songTitle">Searching Archive...</div>
+        <div class="song-artist" id="songArtist">Internet Archive</div>
       </div>
       <button class="btn-remix" id="remixBtn">✨ Remix Vibe</button>
     </div>
@@ -328,52 +268,41 @@
   </div>
 
   <div class="history-card" id="historyCard">
-    <h3>📜 Suggested Track History <span id="historyCount">(0)</span></h3>
+    <h3>📜 Session History <span id="historyCount">(0)</span></h3>
     <div class="history-list" id="historyList"></div>
   </div>
 </div>
 
 <script>
-  // =========================================================================
-  // 1. PUBLIC STREAMING NODES & SESSION STATE MANAGEMENT
-  // =========================================================================
-  const INVIDIOUS_INSTANCES = [
-    'https://invidious.nerdvpn.de',
-    'https://inv.tux.pizza',
-    'https://invidious.drgns.space'
-  ];
-
   let model;
-  
-  // SESSION STATE SCHEMA
+
   const activeSession = {
     imageHash: null,
-    labels: [],
-    playedTrackIds: new Set(),
+    detectedObjects: [], // STORES ALL DETECTED OBJECTS
+    lightingMood: '',
+    colorPaletteTag: '',
+    playedUrls: new Set(),
     historyLog: []
   };
 
   async function initAI() {
     const statusText = document.getElementById('statusText');
-    statusText.innerText = "⚡ Loading visual analysis engine...";
+    statusText.innerText = "⚡ Loading object detection vision model...";
     model = await cocoSsd.load();
-    statusText.innerText = "✅ Engine Ready! Upload an image to play music.";
+    statusText.innerText = "✅ Engine Ready! Upload an image to detect all objects & filters.";
   }
   initAI();
 
   const dropZone = document.getElementById('dropZone');
   const imageInput = document.getElementById('imageInput');
-  const audioPlayer = document.getElementById('audioPlayer');
   const remixBtn = document.getElementById('remixBtn');
   const languageSelect = document.getElementById('languageSelect');
   const vibeSelect = document.getElementById('vibeSelect');
 
   dropZone.addEventListener('click', () => imageInput.click());
-  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); });
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
-    dropZone.classList.remove('dragover');
     if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
   });
 
@@ -381,34 +310,9 @@
     if (e.target.files.length) processFile(e.target.files[0]);
   });
 
-  remixBtn.addEventListener('click', () => {
-    fetchAndPlayNextTrack();
-  });
-
-  languageSelect.addEventListener('change', () => {
-    fetchAndPlayNextTrack();
-  });
-
-  vibeSelect.addEventListener('change', () => {
-    fetchAndPlayNextTrack();
-  });
-
-  // Simple Canvas Pixel Fingerprint Generator
-  function generateImageFingerprint(img) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 32;
-    canvas.height = 32;
-    ctx.drawImage(img, 0, 0, 32, 32);
-    const data = ctx.getImageData(0, 0, 32, 32).data;
-    
-    let hash = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      hash = ((hash << 5) - hash) + data[i] + data[i+1] + data[i+2];
-      hash |= 0;
-    }
-    return 'img_' + Math.abs(hash);
-  }
+  remixBtn.addEventListener('click', () => searchAndPlayArchiveTrack());
+  languageSelect.addEventListener('change', () => searchAndPlayArchiveTrack());
+  vibeSelect.addEventListener('change', () => searchAndPlayArchiveTrack());
 
   function processFile(file) {
     const reader = new FileReader();
@@ -422,136 +326,222 @@
       img.onload = async () => {
         const newHash = generateImageFingerprint(img);
 
-        // RESET HISTORY AND STATE ONLY WHEN A NEW IMAGE IS DETECTED
         if (activeSession.imageHash !== newHash) {
           activeSession.imageHash = newHash;
-          activeSession.playedTrackIds.clear();
+          activeSession.playedUrls.clear();
           activeSession.historyLog = [];
           updateHistoryUI();
         }
 
-        await analyzeAndPlay(img);
+        await analyzeImageContext(img);
       };
     };
     reader.readAsDataURL(file);
   }
 
-  async function analyzeAndPlay(img) {
-    if (!model) return;
-    
-    const scanner = document.getElementById('scannerLine');
+  function generateImageFingerprint(img) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 32; canvas.height = 32;
+    ctx.drawImage(img, 0, 0, 32, 32);
+    const data = ctx.getImageData(0, 0, 32, 32).data;
+    let hash = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      hash = ((hash << 5) - hash) + data[i] + data[i+1] + data[i+2];
+      hash |= 0;
+    }
+    return 'img_' + Math.abs(hash);
+  }
+
+  async function analyzeImageContext(img) {
     const statusText = document.getElementById('statusText');
+    statusText.innerText = "🔍 Scanning image for ALL objects, light levels, & color tones...";
 
-    scanner.style.display = 'block';
-    statusText.innerText = "🔍 Processing visual elements & scene context...";
-
+    // 1. Detect ALL Objects in Image (Filtered for Uniques)
     const predictions = await model.detect(img);
-    scanner.style.display = 'none';
+    const detectedList = predictions.map(p => p.class.toLowerCase().trim());
+    
+    // Remove duplicates while keeping full list of detected items
+    activeSession.detectedObjects = [...new Set(detectedList)];
+    
+    if (activeSession.detectedObjects.length === 0) {
+      activeSession.detectedObjects = ["landscape", "background"];
+    }
 
-    if (predictions.length > 0) {
-      activeSession.labels = [...new Set(predictions.map(p => p.class.toLowerCase()))];
+    // 2. Perform Pixel Luminance & Color Temperature Analysis
+    analyzeColorFilters(img);
+
+    // 3. Render Tag Chips for all detected visual metadata
+    renderTagsUI();
+
+    statusText.innerText = `🎵 Detected ${activeSession.detectedObjects.length} object(s)! Querying Internet Archive...`;
+    searchAndPlayArchiveTrack();
+  }
+
+  function analyzeColorFilters(img) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 100;
+    canvas.height = 100;
+    ctx.drawImage(img, 0, 0, 100, 100);
+
+    const data = ctx.getImageData(0, 0, 100, 100).data;
+    let totalLuminance = 0;
+    let totalR = 0, totalG = 0, totalB = 0;
+    const pixelCount = data.length / 4;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      totalR += r; totalG += g; totalB += b;
+
+      // Standard Relative Luminance Formula
+      const lum = (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+      totalLuminance += lum;
+    }
+
+    const avgLum = totalLuminance / pixelCount;
+    const avgR = totalR / pixelCount;
+    const avgG = totalG / pixelCount;
+    const avgB = totalB / pixelCount;
+
+    // Classify Dark vs Light Filter
+    if (avgLum < 85) {
+      activeSession.lightingMood = "dark moody night ambient";
+    } else if (avgLum > 170) {
+      activeSession.lightingMood = "bright sunny day bright";
     } else {
-      activeSession.labels = [analyzeLandscapeColor(img)];
+      activeSession.lightingMood = "balanced atmospheric";
     }
 
-    statusText.innerText = `🎶 Detected: ${activeSession.labels.join(', ')}. Fetching best match...`;
-    fetchAndPlayNextTrack();
-  }
-
-  function analyzeLandscapeColor(img) {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = img.naturalWidth;
-    tempCanvas.height = img.naturalHeight;
-    tempCtx.drawImage(img, 0, 0);
-
-    const data = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-    let r = 0, g = 0, b = 0;
-    const step = 20;
-
-    for (let i = 0; i < data.length; i += 4 * step) {
-      r += data[i]; g += data[i + 1]; b += data[i + 2];
+    // Classify Dominant Color Temperature / Filter
+    if (avgR > avgB + 20 && avgR > avgG) {
+      activeSession.colorPaletteTag = "warm red golden acoustic";
+    } else if (avgB > avgR + 15) {
+      activeSession.colorPaletteTag = "cool blue calm chill";
+    } else if (avgG > avgR && avgG > avgB) {
+      activeSession.colorPaletteTag = "green nature organic relax";
+    } else {
+      activeSession.colorPaletteTag = "lofi soft melody";
     }
-
-    const total = data.length / (4 * step);
-    r = r / total; g = g / total; b = b / total;
-
-    if (g > r && g > b) return "nature forest";
-    if (b > r && b > g) return "sky mountain ocean";
-    return "chill landscape";
   }
 
-  async function fetchAndPlayNextTrack() {
+  function renderTagsUI() {
+    const tagContainer = document.getElementById('tagContainer');
+    tagContainer.innerHTML = '';
+
+    // Render chips for ALL detected objects
+    activeSession.detectedObjects.forEach(obj => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip object-chip';
+      chip.innerText = `#${obj}`;
+      tagContainer.appendChild(chip);
+    });
+
+    // Render lighting & color filter chips
+    const filterTags = [
+      activeSession.lightingMood.split(' ')[0] + " filter",
+      activeSession.colorPaletteTag.split(' ')[0] + " tone"
+    ];
+
+    filterTags.forEach(f => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerText = `#${f}`;
+      tagContainer.appendChild(chip);
+    });
+  }
+
+  async function searchAndPlayArchiveTrack() {
     const statusText = document.getElementById('statusText');
     const lang = languageSelect.value;
     const vibe = vibeSelect.value;
     
-    const searchQuery = `${activeSession.labels.join(" ")} ${lang} ${vibe} song audio`;
-    statusText.innerText = `🔍 Searching suitable track: "${searchQuery}"...`;
+    // COMBINE ALL OBJECTS INTO THE QUERY STRING
+    const allObjectsString = activeSession.detectedObjects.join(" ");
+    const lightFilter = activeSession.lightingMood.split(' ')[0];
+    const colorFilter = activeSession.colorPaletteTag.split(' ')[0];
 
-    for (const instance of INVIDIOUS_INSTANCES) {
-      try {
-        const searchUrl = `${instance}/api/v1/search?q=${encodeURIComponent(searchQuery)}&type=video`;
-        const res = await fetch(searchUrl);
-        if (!res.ok) continue;
-        
-        const videos = await res.json();
-        if (!videos || videos.length === 0) continue;
+    // Primary precise query: Language + Mood + ALL Objects + Dark/Light Filter + Color Filter
+    const fullQuery = `${lang} ${vibe} ${allObjectsString} ${lightFilter} ${colorFilter}`;
+    
+    statusText.innerText = `🔍 Full Match Query: "${fullQuery}"...`;
 
-        // FILTER OUT ALREADY PLAYED TRACKS TO PREVENT REPEATS
-        const unplayedVideos = videos.filter(v => !activeSession.playedTrackIds.has(v.videoId));
+    try {
+      // Step 1: Strict Multi-Constraint Query
+      let searchUrl = `https://archive.org/advancedsearch.php?q=mediatype:audio+AND+(${encodeURIComponent(fullQuery)})&fl[]=identifier,title,creator,downloads&sort[]=downloads+desc&output=json&rows=20`;
+      let res = await fetch(searchUrl);
+      let searchData = await res.json();
+      let docs = searchData.response.docs;
 
-        let targetVideo;
-        if (unplayedVideos.length > 0) {
-          targetVideo = unplayedVideos[0];
-        } else {
-          // Fallback: If all candidates in current batch were played, reset session filter for rotation
-          activeSession.playedTrackIds.clear();
-          targetVideo = videos[0];
-        }
-
-        const videoId = targetVideo.videoId;
-        const videoDetailsRes = await fetch(`${instance}/api/v1/videos/${videoId}`);
-        if (!videoDetailsRes.ok) continue;
-        
-        const videoDetails = await videoDetailsRes.json();
-        const audioStreams = videoDetails.adaptiveFormats.filter(f => f.type && f.type.startsWith('audio/'));
-        
-        if (audioStreams.length === 0) continue;
-
-        const selectedAudioStream = audioStreams[0].url;
-
-        // REGISTER AS PLAYED IN STATE
-        activeSession.playedTrackIds.add(videoId);
-
-        // UPDATE UI PLAYER
-        document.getElementById('songTitle').innerText = targetVideo.title;
-        document.getElementById('songArtist').innerText = targetVideo.author;
-        
-        audioPlayer.src = selectedAudioStream;
-        document.getElementById('playerCard').style.display = 'flex';
-        audioPlayer.play();
-
-        statusText.innerText = `▶️ Playing: ${targetVideo.title}`;
-
-        // UPDATE HISTORY LOG
-        const historyItem = { 
-          title: targetVideo.title, 
-          artist: targetVideo.author, 
-          lang: lang.toUpperCase(),
-          videoId: videoId
-        };
-        
-        activeSession.historyLog.push(historyItem);
-        updateHistoryUI();
-        return;
-
-      } catch (err) {
-        console.warn(`Instance failed: ${instance}, trying next node...`);
+      // Step 2: Fallback 1 (All Objects + Language + Mood)
+      if (!docs || docs.length === 0) {
+        const fallback1Query = `${lang} ${vibe} ${allObjectsString}`;
+        searchUrl = `https://archive.org/advancedsearch.php?q=mediatype:audio+AND+(${encodeURIComponent(fallback1Query)})&fl[]=identifier,title,creator,downloads&sort[]=downloads+desc&output=json&rows=20`;
+        res = await fetch(searchUrl);
+        searchData = await res.json();
+        docs = searchData.response.docs;
       }
-    }
 
-    statusText.innerText = "⚠️ Stream connection busy. Click Remix to try again.";
+      // Step 3: Fallback 2 (Language + Mood + Light Filter)
+      if (!docs || docs.length === 0) {
+        const fallback2Query = `${lang} ${vibe} ${lightFilter}`;
+        searchUrl = `https://archive.org/advancedsearch.php?q=mediatype:audio+AND+(${encodeURIComponent(fallback2Query)})&fl[]=identifier,title,creator,downloads&sort[]=downloads+desc&output=json&rows=20`;
+        res = await fetch(searchUrl);
+        searchData = await res.json();
+        docs = searchData.response.docs;
+      }
+
+      if (!docs || docs.length === 0) {
+        statusText.innerText = "⚠️ No matching track found on Internet Archive for this combination. Try changing mood/language.";
+        return;
+      }
+
+      // Step 4: Extract valid MP3 stream from query results
+      for (const item of docs) {
+        const metaRes = await fetch(`https://archive.org/metadata/${item.identifier}`);
+        const metaData = await metaRes.json();
+
+        // Find standard MP3 file that hasn't been played in current session
+        const mp3File = (metaData.files || []).find(f => f.name.endsWith('.mp3') && !activeSession.playedUrls.has(`https://archive.org/download/${item.identifier}/${f.name}`));
+
+        if (mp3File) {
+          const directAudioUrl = `https://archive.org/download/${item.identifier}/${mp3File.name}`;
+          const title = item.title || mp3File.title || mp3File.name.replace('.mp3', '');
+          const artist = item.creator || "Archive Recording";
+
+          activeSession.playedUrls.add(directAudioUrl);
+
+          // Stream pure audio directly into standard HTML5 <audio> tag
+          const audioPlayer = document.getElementById('audioPlayer');
+          audioPlayer.src = directAudioUrl;
+          
+          document.getElementById('songTitle').innerText = title;
+          document.getElementById('songArtist').innerText = artist;
+          document.getElementById('playerCard').style.display = 'flex';
+
+          audioPlayer.play();
+          statusText.innerText = `▶️ Playing Best Match: ${title}`;
+
+          logHistory(title, artist, directAudioUrl);
+          return;
+        }
+      }
+
+      statusText.innerText = "🔄 Exhausted current tracks pool. Click Remix Vibe to scan fresh matches.";
+      activeSession.playedUrls.clear();
+
+    } catch (err) {
+      console.error(err);
+      statusText.innerText = "❌ Network connection error fetching from Internet Archive.";
+    }
+  }
+
+  function logHistory(title, artist, audioUrl) {
+    activeSession.historyLog.push({ title, artist, audioUrl });
+    updateHistoryUI();
   }
 
   function updateHistoryUI() {
@@ -568,20 +558,15 @@
     historyCount.innerText = `(${activeSession.historyLog.length})`;
     historyList.innerHTML = '';
 
-    activeSession.historyLog.slice().reverse().forEach((item, index) => {
-      const realSequenceIndex = activeSession.historyLog.length - index;
-      const isCurrent = index === 0;
-
+    activeSession.historyLog.slice().reverse().forEach((item, idx) => {
+      const realIdx = activeSession.historyLog.length - idx;
       const div = document.createElement('div');
-      div.className = `history-item ${isCurrent ? 'active' : ''}`;
+      div.className = 'history-item';
       div.innerHTML = `
-        <div class="history-info">
-          <span class="history-index">#${realSequenceIndex}</span>
-          <div class="history-info-text">
-            <strong>${item.title}</strong> — <span style="color:#94a3b8">${item.artist}</span>
-          </div>
+        <div>
+          <strong>#${realIdx} ${item.title}</strong> — <span style="color:#94a3b8">${item.artist}</span>
         </div>
-        <a href="https://www.youtube.com/watch?v=${item.videoId}" target="_blank" class="badge-lang">Watch on YT ↗</a>
+        <a href="${item.audioUrl}" target="_blank" style="color:#38bdf8; text-decoration:none;">Direct Link ↗</a>
       `;
       historyList.appendChild(div);
     });
